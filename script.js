@@ -7,42 +7,61 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js';
 
-/* --- SETUP --- */
+/* --- 1. CONFIGURATION DE LA SCÈNE --- */
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x020202);
-scene.fog = new THREE.FogExp2(0x020202, 0.02);
+// On met un fond gris très très foncé (pas noir total) pour voir les ombres
+scene.background = new THREE.Color(0x111111);
+// Brouillard moins dense pour mieux voir au loin
+scene.fog = new THREE.FogExp2(0x111111, 0.01);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(-4, 1.5, 6);
+// Position de départ un peu plus reculée et haute
+camera.position.set(-6, 2.5, 7);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+// On augmente l'exposition pour "allumer" la scène
+renderer.toneMappingExposure = 1.8;
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-/* --- CONTROLS --- */
+/* --- 2. CONTRÔLES --- */
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.maxPolarAngle = Math.PI / 2 - 0.05;
-controls.minDistance = 3;
-controls.maxDistance = 9;
+controls.maxPolarAngle = Math.PI / 2 - 0.05; // Empêche de passer sous le sol
+controls.minDistance = 4;
+controls.maxDistance = 12;
 controls.enablePan = false;
+controls.target.set(0, 0.5, 0); // Regarde un peu au-dessus du sol (le centre de la voiture)
 
-/* --- LIGHTS --- */
-const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
+/* --- 3. ÉCLAIRAGE STUDIO (Pour régler le problème "Tout noir") --- */
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Lumière ambiante forte
 scene.add(ambientLight);
 
-const spotLight = new THREE.SpotLight(0xffffff, 30);
-spotLight.position.set(0, 10, 0);
-spotLight.angle = 0.6;
-spotLight.penumbra = 0.5;
-spotLight.castShadow = true;
-scene.add(spotLight);
+// Spot Principal (Haut)
+const topLight = new THREE.SpotLight(0xffffff, 20);
+topLight.position.set(0, 15, 0);
+topLight.angle = 0.6;
+topLight.penumbra = 0.5;
+topLight.castShadow = true;
+topLight.shadow.bias = -0.0001;
+scene.add(topLight);
 
-// Néons Sol
-const gridHelper = new THREE.GridHelper(50, 50, 0x222222, 0x111111);
+// Lumière de remplissage (Avant-Gauche) - Pour voir la calandre
+const frontFill = new THREE.DirectionalLight(0xffffff, 5);
+frontFill.position.set(-5, 2, 5);
+scene.add(frontFill);
+
+// Lumière de contour (Arrière-Droite) - Pour détacher la voiture du fond
+const backRim = new THREE.DirectionalLight(0xffffff, 5);
+backRim.position.set(5, 2, -5);
+scene.add(backRim);
+
+// Néons Sol (Décoration)
+const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
 scene.add(gridHelper);
 
 const planeGeo = new THREE.PlaneGeometry(200, 200);
@@ -53,146 +72,164 @@ floor.position.y = -0.01;
 floor.receiveShadow = true;
 scene.add(floor);
 
-/* --- VFX PARTICLES (TUNNEL) --- */
+/* --- 4. PARTICULES (VITESSE) --- */
 const particlesGeo = new THREE.BufferGeometry();
-const particlesCount = 2000; // Beaucoup plus de particules
+const particlesCount = 2000;
 const posArray = new Float32Array(particlesCount * 3);
-
 for(let i=0; i<particlesCount * 3; i++) {
-    posArray[i] = (Math.random() - 0.5) * 40; // Plus large
+    posArray[i] = (Math.random() - 0.5) * 40;
 }
 particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
 const particlesMat = new THREE.PointsMaterial({
-    size: 0.02, color: 0x00f3ff, transparent: true, opacity: 0.6
+    size: 0.03, color: 0x00f3ff, transparent: true, opacity: 0.6
 });
 const particlesMesh = new THREE.Points(particlesGeo, particlesMat);
 scene.add(particlesMesh);
 
-/* --- CAR LOADER --- */
+/* --- 5. CHARGEMENT VOITURE --- */
 const loader = new GLTFLoader();
 let carModel = null;
-// Sauvegarde des matériaux originaux pour le X-Ray
 const originalMaterials = new Map();
 
-// Matériaux spéciaux
-const bodyMaterial = new THREE.MeshPhysicalMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.2, clearcoat: 1.0, envMapIntensity: 2.5 });
+// Matériau Carrosserie (Gris foncé par défaut pour bien voir la lumière)
+const bodyMaterial = new THREE.MeshPhysicalMaterial({ 
+    color: 0x444444, // Pas noir pur, sinon on voit rien
+    metalness: 0.9, 
+    roughness: 0.2, 
+    clearcoat: 1.0, 
+    clearcoatRoughness: 0.1,
+    envMapIntensity: 2.5 
+});
+
 const xrayMaterial = new THREE.MeshBasicMaterial({ color: 0x00f3ff, wireframe: true, transparent: true, opacity: 0.3 });
 
 loader.load('cla45.glb', (gltf) => {
     carModel = gltf.scene;
+    console.log("Voiture chargée !");
 
-    // Auto-Scale & Center
+    // Calcul automatique de la taille
     const box = new THREE.Box3().setFromObject(carModel);
     const size = box.getSize(new THREE.Vector3());
-    const scaleFactor = 4.8 / Math.max(size.x, size.y, size.z);
-    carModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    const desiredLength = 4.8; 
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scaleFactor = desiredLength / maxDim;
     
+    carModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+    // Centrage
     const newBox = new THREE.Box3().setFromObject(carModel);
     const center = newBox.getCenter(new THREE.Vector3());
-    carModel.position.sub(center);
+    carModel.position.x += (carModel.position.x - center.x);
+    carModel.position.z += (carModel.position.z - center.z);
     carModel.position.y = 0;
 
-    // Apply Base Material & Save for X-Ray
+    // --- APPLICATION MATÉRIAUX (Correction Problème Couleur) ---
     carModel.traverse((o) => {
         if (o.isMesh) {
-            o.castShadow = true; o.receiveShadow = true;
-            originalMaterials.set(o.uuid, o.material); // Save original
+            o.castShadow = true; 
+            o.receiveShadow = true;
+            originalMaterials.set(o.uuid, o.material);
 
-            if(o.name.toLowerCase().includes('body') || o.name.toLowerCase().includes('paint')) {
+            const n = o.name.toLowerCase();
+            const mn = o.material && o.material.name ? o.material.name.toLowerCase() : "";
+
+            // On cherche n'importe quoi qui ressemble à de la peinture
+            // On ajoute plus de mots clés pour être sûr de trouver
+            if(n.includes('body') || n.includes('paint') || n.includes('chassis') || n.includes('metal_primary') ||
+               mn.includes('paint') || mn.includes('body') || mn.includes('metal')) {
+                console.log("Carrosserie détectée sur : " + o.name); // Debug console
                 o.material = bodyMaterial;
-                originalMaterials.set(o.uuid, bodyMaterial); // Update save
+                originalMaterials.set(o.uuid, bodyMaterial);
             }
         }
     });
 
     scene.add(carModel);
+    
+    // Cache le loader
     document.getElementById('loader').style.transform = 'translateY(-100%)';
     setTimeout(() => document.getElementById('ui-container').classList.remove('hidden'), 500);
 
-}, undefined, (err) => console.error(err));
+}, undefined, (err) => {
+    console.error("Erreur chargement voiture:", err);
+});
 
-/* --- POST PROCESSING (BLOOM + RGB SHIFT) --- */
+/* --- 6. POST PROCESSING --- */
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 
-// 1. Bloom (Lueur)
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
 bloomPass.threshold = 0.2; bloomPass.strength = 0.4; bloomPass.radius = 0.5;
 composer.addPass(bloomPass);
 
-// 2. RGB Shift (Effet Vitesse/Glitch) - Désactivé par défaut
 const rgbShiftPass = new ShaderPass(RGBShiftShader);
-rgbShiftPass.uniforms['amount'].value = 0.0; // Pas de distorsion au début
+rgbShiftPass.uniforms['amount'].value = 0.0;
 composer.addPass(rgbShiftPass);
 
-/* --- STATES --- */
+/* --- 7. LOGIQUE & ANIMATION --- */
 let isWarping = false;
 let isXRay = false;
 let autoRotate = true;
 let targetPos = null;
 
-/* --- ANIMATION LOOP --- */
 const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
-    const delta = clock.getDelta();
     const time = clock.getElapsedTime();
 
-    // 1. PARTICLE ANIMATION (WARP SPEED)
-    // Si Warp actif, les particules foncent vers nous (Z axis)
+    // Animation particules
     const positions = particlesMesh.geometry.attributes.position.array;
-    const speed = isWarping ? 2.0 : 0.05; // Vitesse x40 en mode Warp
+    const speed = isWarping ? 2.0 : 0.05;
 
-    for(let i=1; i<particlesCount * 3; i+=3) { // i+1 = Y, i+2 = Z
-        positions[i+1] += speed; // Bouge en Z
-        if(positions[i+1] > 10) { // Si passe derrière caméra
-            positions[i+1] = -20; // Reset loin derrière
-        }
+    for(let i=1; i<particlesCount * 3; i+=3) { 
+        positions[i+1] += speed; 
+        if(positions[i+1] > 10) positions[i+1] = -20; 
     }
     particlesMesh.geometry.attributes.position.needsUpdate = true;
 
-    // 2. CAMERA SHAKE (WARP)
+    // Warp Shake
     if(isWarping) {
         camera.position.x += (Math.random() - 0.5) * 0.02;
         camera.position.y += (Math.random() - 0.5) * 0.02;
-        // Augmenter l'effet RGB Shift
         rgbShiftPass.uniforms['amount'].value = 0.005 + Math.random() * 0.002;
     } else {
-        // Retour progressif à la normale
         rgbShiftPass.uniforms['amount'].value = THREE.MathUtils.lerp(rgbShiftPass.uniforms['amount'].value, 0, 0.1);
     }
 
-    // 3. CAMERA SMOOTH MOVE
+    // Camera Move
     if (targetPos) {
+        // On force le controls target pour que la caméra regarde toujours la voiture
+        controls.target.lerp(new THREE.Vector3(0, 0.5, 0), 0.1);
         camera.position.lerp(targetPos, 0.05);
-        if(camera.position.distanceTo(targetPos) < 0.1) targetPos = null;
+        
+        // Si on est arrivé
+        if(camera.position.distanceTo(targetPos) < 0.2) {
+            targetPos = null;
+        }
     } else if (autoRotate && !isWarping) {
         controls.update();
     }
-
+    
+    // Toujours mettre à jour les controls
+    controls.update();
     composer.render();
 }
 animate();
 
-/* --- INTERACTIONS --- */
+/* --- 8. INTERACTIONS UTILISATEUR --- */
 
-// 1. WARP DRIVE BUTTON
-const warpBtn = document.getElementById('warp-btn');
-warpBtn.addEventListener('click', () => {
+// WARP
+document.getElementById('warp-btn').addEventListener('click', function() {
     isWarping = !isWarping;
-    warpBtn.classList.toggle('active');
+    this.classList.toggle('active');
     
     if(isWarping) {
-        document.body.classList.add('warping'); // Active CSS speed lines
+        document.body.classList.add('warping');
         document.getElementById('sys-status').innerText = "WARP ENGAGED";
         document.getElementById('sys-status').style.color = "#ff0055";
-        
-        // FOV Effect (Zoom out)
-        // Note: changer le FOV demande updateProjectionMatrix, on simule en reculant
-        targetPos = null;
         autoRotate = false;
-        
+        targetPos = null;
     } else {
         document.body.classList.remove('warping');
         document.getElementById('sys-status').innerText = "ONLINE";
@@ -201,59 +238,76 @@ warpBtn.addEventListener('click', () => {
     }
 });
 
-// 2. X-RAY BUTTON
-const xrayBtn = document.getElementById('xray-btn');
-xrayBtn.addEventListener('click', () => {
+// X-RAY
+document.getElementById('xray-btn').addEventListener('click', function() {
     if(!carModel) return;
     isXRay = !isXRay;
-    xrayBtn.classList.toggle('active');
+    this.classList.toggle('active');
 
     carModel.traverse((o) => {
         if(o.isMesh) {
             if(isXRay) {
-                o.material = xrayMaterial; // Mode fantôme
+                o.material = xrayMaterial;
                 o.castShadow = false;
             } else {
-                o.material = originalMaterials.get(o.uuid); // Restaure l'original
+                // Restaure le matériau d'origine ou bodyMaterial
+                const original = originalMaterials.get(o.uuid);
+                o.material = original ? original : o.material; 
                 o.castShadow = true;
             }
         }
     });
 });
 
-// 3. COLORS
+// COULEURS (Corrigé)
 document.querySelectorAll('.color-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        if(isXRay) return; // Pas de changement de couleur en X-Ray
+        if(isXRay) return;
         document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         document.querySelector('.current-paint').innerText = btn.dataset.name;
-        bodyMaterial.color.setHex(parseInt(btn.dataset.color));
+        
+        // Applique la couleur
+        const colorHex = parseInt(btn.dataset.color);
+        bodyMaterial.color.setHex(colorHex);
     });
 });
 
-// 4. CAMERAS
+// CAMERAS (Coordonnées ajustées pour bien voir)
 document.querySelectorAll('.cam-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        
         const view = btn.dataset.view;
         autoRotate = false;
-        isWarping = false; // Stop warp si on change de vue
+        isWarping = false;
         document.body.classList.remove('warping');
 
-        if(view === 'front') targetPos = new THREE.Vector3(0, 1.0, 5.5);
-        if(view === 'side') targetPos = new THREE.Vector3(5.5, 1.0, 0);
-        if(view === 'back') targetPos = new THREE.Vector3(0, 1.5, -5.5);
-        if(view === 'auto') { autoRotate = true; targetPos = null; }
+        // Coordonnées ajustées pour être plus éloignées et centrées
+        if(view === 'front') targetPos = new THREE.Vector3(0, 1.2, 7.5); // Devant
+        if(view === 'side') targetPos = new THREE.Vector3(7.5, 1.2, 0);  // Coté
+        if(view === 'back') targetPos = new THREE.Vector3(0, 1.8, -7.5); // Derrière
+        if(view === 'auto') { 
+            autoRotate = true; 
+            targetPos = null; 
+        }
     });
 });
 
-// 5. ENGINE SOUND
+// START ENGINE (Son sécurisé)
 document.getElementById('start-engine').addEventListener('click', () => {
+    console.log("Tentative de démarrage...");
+    // On crée l'audio ici pour éviter les blocages navigateur
     const audio = new Audio('startup.mp3');
     audio.volume = 0.5;
-    audio.play();
+    
+    audio.play().then(() => {
+        console.log("Vroum !");
+    }).catch(error => {
+        console.error("Erreur son : Fichier manquant ou bloqué.", error);
+        alert("Erreur: Vérifiez que le fichier startup.mp3 est bien dans le dossier !");
+    });
 });
 
 // RESIZE
