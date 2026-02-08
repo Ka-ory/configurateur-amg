@@ -102,12 +102,12 @@ scene.add(gridHelper);
 /* --- MATÉRIAUX VOITURE --- */
 // Peinture Carrosserie (AMG Magno)
 const bodyMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x1a1a1a, // Noir par défaut
-    metalness: 0.8,
+    color: 0x333333, // Plus clair que 0x1a1a1a
+    metalness: 0.9,  // Plus métallique (réfléchit mieux)
     roughness: 0.2,
     clearcoat: 1.0,
     clearcoatRoughness: 0.05,
-    envMapIntensity: 1.5
+    envMapIntensity: 2.5 // Augmente ça pour plus de reflets !
 });
 
 // Verres / Toit Ouvrant
@@ -292,5 +292,6 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
 });
+
 
 
