@@ -1,0 +1,108 @@
+:root {
+    --amg-red: #e60000;
+    --amg-dark: #0a0a0a;
+    --text-white: #ffffff;
+    --glass: rgba(255, 255, 255, 0.05);
+    --border: rgba(255, 255, 255, 0.1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+body {
+    background: var(--amg-dark);
+    color: var(--text-white);
+    font-family: 'Rajdhani', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+}
+
+canvas {
+    position: fixed; top: 0; left: 0; outline: none; z-index: 1;
+}
+
+/* --- LOADER --- */
+#loader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; z-index: 9999;
+    display: flex; justify-content: center; align-items: center;
+    transition: opacity 1s ease;
+}
+.loader-content { text-align: center; }
+h1 {
+    font-family: 'Orbitron', sans-serif; font-size: 4rem; letter-spacing: 5px;
+    margin-bottom: 20px;
+}
+.hollow { -webkit-text-stroke: 1px #fff; color: transparent; }
+.loading-bar {
+    width: 300px; height: 2px; background: #333; margin: 0 auto 30px;
+    position: relative; overflow: hidden;
+}
+.progress {
+    width: 0%; height: 100%; background: var(--amg-red);
+    transition: width 0.5s; animation: load 2s ease-in-out forwards;
+}
+@keyframes load { 0% { width: 0; } 100% { width: 100%; } }
+
+#start-btn {
+    background: transparent; border: 1px solid #fff; color: #fff;
+    padding: 15px 40px; font-family: 'Orbitron'; font-size: 1rem; cursor: pointer;
+    opacity: 0; transform: translateY(20px); transition: 0.5s;
+}
+#start-btn:hover { background: #fff; color: #000; }
+.loaded #start-btn { opacity: 1; transform: translateY(0); }
+
+/* --- UI HUD --- */
+#ui-container {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 10; pointer-events: none; /* Laisse passer la souris pour la 3D */
+    padding: 40px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: opacity 1s;
+}
+.hidden { opacity: 0; pointer-events: none !important; }
+
+.top-bar {
+    display: flex; justify-content: space-between; align-items: flex-start;
+}
+.logo { font-family: 'Orbitron'; font-weight: 900; font-size: 1.5rem; font-style: italic; }
+.model-name { font-size: 2rem; font-weight: 700; letter-spacing: 2px; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
+
+/* SPECS */
+.specs-container {
+    position: absolute; right: 40px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 30px; text-align: right;
+}
+.spec-box { display: flex; flex-direction: column; }
+.spec-box .label { font-size: 0.8rem; color: #888; letter-spacing: 2px; margin-bottom: 5px; }
+.spec-box .value { font-family: 'Orbitron'; font-size: 2.5rem; line-height: 1; }
+.spec-box .value small { font-size: 1rem; }
+
+/* CONTROLS (Bottom Left) */
+.controls {
+    pointer-events: auto; /* Réactive la souris ici */
+    background: var(--glass); backdrop-filter: blur(10px);
+    padding: 20px; border-radius: 10px; border: 1px solid var(--border);
+    width: fit-content;
+}
+.controls h3 { font-size: 0.9rem; margin-bottom: 15px; color: #aaa; }
+.color-picker { display: flex; gap: 15px; margin-bottom: 10px; }
+.color-btn {
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; transition: 0.3s;
+}
+.color-btn:hover, .color-btn.active { transform: scale(1.2); border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
+.current-color-name { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
+
+/* ACTIONS (Bottom Right) */
+.footer-actions {
+    position: absolute; bottom: 40px; right: 40px;
+    display: flex; gap: 20px; pointer-events: auto;
+}
+.action-btn {
+    background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff;
+    padding: 15px 30px; font-family: 'Rajdhani'; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer; transition: 0.3s;
+}
+.action-btn:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+.action-btn.primary { background: #fff; color: #000; border-color: #fff; }
+.action-btn.primary:hover { background: var(--amg-red); border-color: var(--amg-red); color: #fff; }
