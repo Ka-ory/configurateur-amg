@@ -1,297 +1,248 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { RGBELoader } from 'three/addons/loaders/RGBELoader.js'; // Pour les reflets réalistes
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-/* --- CONFIGURATION --- */
+/* --- SETUP --- */
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050505);
-scene.fog = new THREE.FogExp2(0x050505, 0.015);
+scene.fog = new THREE.FogExp2(0x050505, 0.02);
 
-/* --- CAMERA --- */
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(-4, 1.5, 6); // Angle vue 3/4 avant
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(-5, 2, 6);
 
-/* --- RENDERER --- */
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 /* --- CONTROLS --- */
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.maxPolarAngle = Math.PI / 2 - 0.02; // Bloque la caméra au sol
-controls.minDistance = 3.5;
-controls.maxDistance = 9;
+controls.maxPolarAngle = Math.PI / 2 - 0.05;
+controls.minDistance = 3;
+controls.maxDistance = 10;
 controls.enablePan = false;
 
-/* --- ECLAIRAGE (Studio Photo) --- */
-// Environnement HDR (Reflets carrosserie)
-// On utilise une texture générée ou une couleur simple si pas de HDR
-const pmremGenerator = new THREE.PMREMGenerator(renderer);
-scene.environment = pmremGenerator.fromScene(new THREE.Scene()).texture; // Fallback simple
-
-// Lumières
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+/* --- LIGHTS & ENV --- */
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Forte ambiance
 scene.add(ambientLight);
 
-const spotLight = new THREE.SpotLight(0xffffff, 15);
-spotLight.position.set(5, 8, 5);
+// Spots principaux
+const spotLight = new THREE.SpotLight(0xffffff, 20);
+spotLight.position.set(5, 10, 5);
 spotLight.angle = 0.5;
 spotLight.penumbra = 0.5;
 spotLight.castShadow = true;
-spotLight.shadow.bias = -0.0001;
 spotLight.shadow.mapSize.width = 2048;
 spotLight.shadow.mapSize.height = 2048;
 scene.add(spotLight);
 
-// --- NOUVEAUX SPOTS (Lumières de remplissage) ---
+const blueSpot = new THREE.SpotLight(0x00f3ff, 10);
+blueSpot.position.set(-5, 5, -5);
+scene.add(blueSpot);
 
-// Lumière Avant-Gauche (Pour voir le capot/pare-choc)
-const frontLight = new THREE.DirectionalLight(0xffffff, 3);
-frontLight.position.set(-5, 5, 5);
-scene.add(frontLight);
+const pinkSpot = new THREE.SpotLight(0xff0055, 10);
+pinkSpot.position.set(5, 0, 5);
+scene.add(pinkSpot);
 
-// Lumière Arrière-Droite (Pour voir le diffuseur/coffre)
-const backLight = new THREE.DirectionalLight(0xffffff, 3);
-backLight.position.set(5, 5, -5);
-scene.add(backLight);
+// Sol Réfléchissant (Grid Floor)
+const gridHelper = new THREE.GridHelper(40, 40, 0x333333, 0x111111);
+scene.add(gridHelper);
 
-// Lumière Zénithale (Douceur globale)
-const topLight = new THREE.DirectionalLight(0xffffff, 1);
-topLight.position.set(0, 10, 0);
-scene.add(topLight);
-
-// Néons Décoratifs (Ambiance Cyber/Garage)
-const rectLight1 = new THREE.RectAreaLight(0x00f3ff, 5, 10, 2);
-rectLight1.position.set(-5, 0.1, 5);
-rectLight1.lookAt(0, 0, 0);
-scene.add(rectLight1);
-
-const rectLight2 = new THREE.RectAreaLight(0xff0055, 5, 10, 2);
-rectLight2.position.set(5, 0.1, -5);
-rectLight2.lookAt(0, 0, 0);
-scene.add(rectLight2);
-
-/* --- SOL (Bitume Mouillé) --- */
-const floorGeometry = new THREE.PlaneGeometry(30, 30);
-const floorMaterial = new THREE.MeshStandardMaterial({
-    color: 0x050505,
-    roughness: 0.1,
-    metalness: 0.5,
+const planeGeo = new THREE.PlaneGeometry(100, 100);
+const planeMat = new THREE.MeshStandardMaterial({ 
+    color: 0x050505, roughness: 0.1, metalness: 0.8 
 });
-const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+const floor = new THREE.Mesh(planeGeo, planeMat);
 floor.rotation.x = -Math.PI / 2;
+floor.position.y = -0.01;
 floor.receiveShadow = true;
 scene.add(floor);
 
-// Grille technique au sol
-const gridHelper = new THREE.GridHelper(30, 30, 0x222222, 0x000000);
-gridHelper.position.y = 0.01;
-scene.add(gridHelper);
+/* --- VFX: SCANNING RINGS --- */
+const rings = [];
+const ringGeo = new THREE.TorusGeometry(3.5, 0.02, 16, 100);
+const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f3ff, transparent: true, opacity: 0.5 });
 
-/* --- MATÉRIAUX VOITURE --- */
-// Peinture Carrosserie (AMG Magno)
-const bodyMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x333333, // Plus clair que 0x1a1a1a
-    metalness: 0.9,  // Plus métallique (réfléchit mieux)
-    roughness: 0.2,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.05,
-    envMapIntensity: 2.5 // Augmente ça pour plus de reflets !
+for(let i=0; i<3; i++) {
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = i * 0.5;
+    scene.add(ring);
+    rings.push({ mesh: ring, speed: 0.005 + i * 0.002, offset: i });
+}
+
+/* --- VFX: PARTICLES --- */
+const particlesGeo = new THREE.BufferGeometry();
+const particlesCount = 700;
+const posArray = new Float32Array(particlesCount * 3);
+
+for(let i=0; i<particlesCount * 3; i++) {
+    posArray[i] = (Math.random() - 0.5) * 15; // Spread
+}
+particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+const particlesMat = new THREE.PointsMaterial({
+    size: 0.015, color: 0x00f3ff, transparent: true, opacity: 0.8
 });
+const particlesMesh = new THREE.Points(particlesGeo, particlesMat);
+scene.add(particlesMesh);
 
-// Verres / Toit Ouvrant
-const glassMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x000000,
-    metalness: 0.9,
-    roughness: 0.0,
-    transmission: 0.2, // Légèrement transparent
-    transparent: true,
-    opacity: 0.7
-});
-
-/* --- CHARGEMENT DU MODÈLE (CLA 45) --- */
+/* --- CAR LOADING --- */
 const loader = new GLTFLoader();
 let carModel = null;
+const bodyMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x111111, metalness: 0.9, roughness: 0.2, clearcoat: 1.0, envMapIntensity: 2.5
+});
 
-loader.load('cla45.glb', function (gltf) {
+// Points d'intérêt (Position relative à la voiture)
+// 0: Moteur/Capot, 1: Arrière/Aero
+const hotspots = [
+    { position: new THREE.Vector3(0, 0.8, 1.5), element: document.querySelector('.point-0') },
+    { position: new THREE.Vector3(0, 0.6, -2.0), element: document.querySelector('.point-1') }
+];
+
+loader.load('cla45.glb', (gltf) => {
     carModel = gltf.scene;
 
-    // 1. CALCUL DE LA TAILLE ACTUELLE
+    // Redimensionnement automatique
     const box = new THREE.Box3().setFromObject(carModel);
     const size = box.getSize(new THREE.Vector3());
-    
-    // 2. FORMULE MAGIQUE DE REDIMENSIONNEMENT
-    // On veut que la voiture fasse environ 5 unités de long dans notre scène
-    const desiredLength = 5.0; 
-    
-    // On prend la plus grande dimension (longueur) pour calculer le ratio
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const scaleFactor = desiredLength / maxDim;
-    
-    // On applique la taille idéale
+    const scaleFactor = 4.8 / Math.max(size.x, size.y, size.z); // Target size ~4.8m
     carModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
-    // 3. RE-CENTRAGE PARFAIT (Pour qu'elle soit bien au sol)
-    // On doit recalculer la box après le redimensionnement
+    // Centrage
     const newBox = new THREE.Box3().setFromObject(carModel);
     const center = newBox.getCenter(new THREE.Vector3());
-    
-    carModel.position.x += (carModel.position.x - center.x);
-    carModel.position.z += (carModel.position.z - center.z);
-    carModel.position.y = 0; // On la pose au sol
+    carModel.position.sub(center);
+    carModel.position.y = 0; // Au sol
 
-    // 4. APPLICATION DES MATÉRIAUX
+    // Materials
     carModel.traverse((o) => {
         if (o.isMesh) {
-            o.castShadow = true;
-            o.receiveShadow = true;
-
-            const name = o.name.toLowerCase();
-            const matName = o.material ? o.material.name.toLowerCase() : "";
-
-            // Carrosserie
-            if (name.includes('body') || name.includes('paint') || matName.includes('paint') || matName.includes('body')) {
+            o.castShadow = true; o.receiveShadow = true;
+            if(o.name.toLowerCase().includes('body') || o.name.toLowerCase().includes('paint')) {
                 o.material = bodyMaterial;
-            }
-            // Vitres
-            if (name.includes('glass') || name.includes('window') || matName.includes('glass')) {
-                o.material = glassMaterial;
             }
         }
     });
 
     scene.add(carModel);
     
-    // 5. ANIMATION D'ENTRÉE (Corrigée avec la nouvelle taille)
-    carModel.scale.set(0, 0, 0);
-    let currentScale = 0;
-    const interval = setInterval(() => {
-        currentScale += scaleFactor / 40; // Vitesse de l'animation
-        if(currentScale >= scaleFactor) {
-            currentScale = scaleFactor;
-            clearInterval(interval);
-        }
-        carModel.scale.set(currentScale, currentScale, currentScale);
-    }, 16);
+    // Remove loader
+    document.getElementById('loader').style.transform = 'translateY(-100%)';
+    setTimeout(() => document.getElementById('ui-container').classList.remove('hidden'), 500);
 
-}, undefined, function (error) {
-    console.error('Erreur chargement:', error);
-    alert("Impossible de charger 'cla45.glb'. Vérifie que le fichier est bien dans le dossier et porte ce nom exact !");
-});
+}, undefined, (err) => console.error(err));
 
-
-/* --- POST-PROCESSING (Glow/Bloom) --- */
+/* --- POST PROCESSING (BLOOM) --- */
 const composer = new EffectComposer(renderer);
-const renderPass = new RenderPass(scene, camera);
-composer.addPass(renderPass);
-
-const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    1.5, 0.4, 0.85
-);
-bloomPass.threshold = 0.2;
-bloomPass.strength = 0.6; // Intensité du néon
-bloomPass.radius = 0.5;
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+bloomPass.threshold = 0.2; bloomPass.strength = 0.4; bloomPass.radius = 0.5;
 composer.addPass(bloomPass);
 
 /* --- ANIMATION LOOP --- */
+// Camera logic
+let targetPos = null;
+let autoRotate = true;
+
+const clock = new THREE.Clock();
+
 function animate() {
     requestAnimationFrame(animate);
+    const elapsedTime = clock.getElapsedTime();
+
+    // 1. Anime Rings
+    rings.forEach((r, i) => {
+        r.mesh.position.y = Math.sin(elapsedTime * 0.5 + r.offset) * 1.5 + 1.5;
+        r.mesh.scale.x = r.mesh.scale.y = 1 + Math.sin(elapsedTime * 2) * 0.02;
+    });
+
+    // 2. Anime Particles
+    particlesMesh.rotation.y = elapsedTime * 0.05;
+
+    // 3. Camera Movement
+    if (targetPos) {
+        camera.position.lerp(targetPos, 0.05);
+        if(camera.position.distanceTo(targetPos) < 0.1) targetPos = null;
+    } else if (autoRotate) {
+        controls.update(); // Orbit normal
+    }
+    
     controls.update();
+
+    // 4. Update Hotspots Positions
+    if(carModel) {
+        hotspots.forEach(hotspot => {
+            // Clone position pour ne pas modifier l'original
+            const pos = hotspot.position.clone();
+            pos.applyMatrix4(carModel.matrixWorld); // Suivre la voiture
+            pos.project(camera); // Convertir en 2D écran
+
+            const x = (pos.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (pos.y * -0.5 + 0.5) * window.innerHeight;
+
+            // Afficher seulement si visible (devant la caméra)
+            if(Math.abs(pos.z) < 1) {
+                hotspot.element.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+                hotspot.element.classList.add('visible');
+            } else {
+                hotspot.element.classList.remove('visible');
+            }
+        });
+    }
+
     composer.render();
+    
+    // Update FPS fake
+    if(Math.random() > 0.9) document.getElementById('fps').innerText = Math.floor(58 + Math.random() * 4);
 }
 animate();
 
-/* --- INTERFACE LOGIC --- */
-
-// 1. START BUTTON
-const startBtn = document.getElementById('start-btn');
-const loaderDiv = document.getElementById('loader');
-const ui = document.getElementById('ui-container');
-
-// Fake loading
-setTimeout(() => document.body.classList.add('loaded'), 1500);
-
-startBtn.addEventListener('click', () => {
-    // Cinématique Caméra
-    const startPos = { x: -4, y: 1.5, z: 6 };
-    const endPos = { x: 4, y: 1.2, z: 4.5 }; // Tourne autour
-    
-    let progress = 0;
-    function introAnim() {
-        progress += 0.008;
-        if(progress <= 1) {
-            camera.position.x = startPos.x + (endPos.x - startPos.x) * progress;
-            camera.position.z = startPos.z + (endPos.z - startPos.z) * progress;
-            camera.lookAt(0, 0, 0);
-            requestAnimationFrame(introAnim);
-        }
-    }
-    introAnim();
-
-    loaderDiv.style.opacity = '0';
-    setTimeout(() => {
-        loaderDiv.style.display = 'none';
-        ui.classList.remove('hidden');
-    }, 1000);
-});
-
-// 2. COLOR PICKER
-const colorBtns = document.querySelectorAll('.color-btn');
-const colorName = document.querySelector('.current-color-name');
-
-colorBtns.forEach(btn => {
+/* --- UI INTERACTIONS --- */
+// Couleurs
+document.querySelectorAll('.color-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        colorBtns.forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
-        colorName.innerText = btn.getAttribute('data-name');
-        const colorVal = parseInt(btn.getAttribute('data-color'));
-        
-        // Change la couleur du matériau physique
-        bodyMaterial.color.setHex(colorVal);
+        document.querySelector('.current-paint').innerText = btn.dataset.name;
+        bodyMaterial.color.setHex(parseInt(btn.dataset.color));
     });
 });
 
-// 3. LIGHTS
-const lightsBtn = document.getElementById('lights-btn');
-let lightsOn = true;
+// Caméra Buttons
+document.querySelectorAll('.cam-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-lightsBtn.addEventListener('click', () => {
-    lightsOn = !lightsOn;
-    if(lightsOn) {
-        spotLight.intensity = 15;
-        rectLight1.intensity = 5;
-        rectLight2.intensity = 5;
-        bloomPass.strength = 0.6;
-        lightsBtn.innerText = "PHARES: ON";
-    } else {
-        spotLight.intensity = 0.5;
-        rectLight1.intensity = 0;
-        rectLight2.intensity = 0;
-        bloomPass.strength = 0.1;
-        lightsBtn.innerText = "PHARES: OFF";
-    }
+        const view = btn.dataset.view;
+        autoRotate = false;
+
+        if(view === 'front') targetPos = new THREE.Vector3(0, 1.0, 5.5);
+        if(view === 'side') targetPos = new THREE.Vector3(5.5, 1.0, 0);
+        if(view === 'back') targetPos = new THREE.Vector3(0, 1.5, -5.5);
+        if(view === 'auto') { autoRotate = true; targetPos = null; }
+    });
 });
 
-/* --- RESIZE --- */
+// Sound
+document.getElementById('start-engine').addEventListener('click', () => {
+    const audio = new Audio('startup.mp3');
+    audio.volume = 0.5;
+    audio.play();
+});
+
+// Resize
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
 });
-
-
-
