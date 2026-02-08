@@ -41,7 +41,7 @@ const pmremGenerator = new THREE.PMREMGenerator(renderer);
 scene.environment = pmremGenerator.fromScene(new THREE.Scene()).texture; // Fallback simple
 
 // Lumières
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
 
 const spotLight = new THREE.SpotLight(0xffffff, 15);
@@ -53,6 +53,23 @@ spotLight.shadow.bias = -0.0001;
 spotLight.shadow.mapSize.width = 2048;
 spotLight.shadow.mapSize.height = 2048;
 scene.add(spotLight);
+
+// --- NOUVEAUX SPOTS (Lumières de remplissage) ---
+
+// Lumière Avant-Gauche (Pour voir le capot/pare-choc)
+const frontLight = new THREE.DirectionalLight(0xffffff, 3);
+frontLight.position.set(-5, 5, 5);
+scene.add(frontLight);
+
+// Lumière Arrière-Droite (Pour voir le diffuseur/coffre)
+const backLight = new THREE.DirectionalLight(0xffffff, 3);
+backLight.position.set(5, 5, -5);
+scene.add(backLight);
+
+// Lumière Zénithale (Douceur globale)
+const topLight = new THREE.DirectionalLight(0xffffff, 1);
+topLight.position.set(0, 10, 0);
+scene.add(topLight);
 
 // Néons Décoratifs (Ambiance Cyber/Garage)
 const rectLight1 = new THREE.RectAreaLight(0x00f3ff, 5, 10, 2);
@@ -275,4 +292,5 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
 });
+
 
