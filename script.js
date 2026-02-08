@@ -107,53 +107,65 @@ const glassMaterial = new THREE.MeshPhysicalMaterial({
 const loader = new GLTFLoader();
 let carModel = null;
 
-// Charge le fichier 'cla45.glb'
 loader.load('cla45.glb', function (gltf) {
     carModel = gltf.scene;
-    
-    // Centrer et ajuster la voiture
+
+    // 1. CALCUL DE LA TAILLE ACTUELLE
     const box = new THREE.Box3().setFromObject(carModel);
-    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    
+    // 2. FORMULE MAGIQUE DE REDIMENSIONNEMENT
+    // On veut que la voiture fasse environ 5 unités de long dans notre scène
+    const desiredLength = 5.0; 
+    
+    // On prend la plus grande dimension (longueur) pour calculer le ratio
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scaleFactor = desiredLength / maxDim;
+    
+    // On applique la taille idéale
+    carModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+    // 3. RE-CENTRAGE PARFAIT (Pour qu'elle soit bien au sol)
+    // On doit recalculer la box après le redimensionnement
+    const newBox = new THREE.Box3().setFromObject(carModel);
+    const center = newBox.getCenter(new THREE.Vector3());
+    
     carModel.position.x += (carModel.position.x - center.x);
     carModel.position.z += (carModel.position.z - center.z);
-    carModel.position.y = 0; // Au sol
+    carModel.position.y = 0; // On la pose au sol
 
-    // Optimisation et Application des matériaux
+    // 4. APPLICATION DES MATÉRIAUX
     carModel.traverse((o) => {
         if (o.isMesh) {
             o.castShadow = true;
             o.receiveShadow = true;
 
-            // Logique de détection automatique des pièces
             const name = o.name.toLowerCase();
             const matName = o.material ? o.material.name.toLowerCase() : "";
 
-            // 1. CARROSSERIE (Cherche "body", "paint", "carpaint")
+            // Carrosserie
             if (name.includes('body') || name.includes('paint') || matName.includes('paint') || matName.includes('body')) {
-                o.material = bodyMaterial; // Applique notre peinture changeante
+                o.material = bodyMaterial;
             }
-
-            // 2. VITRES / TOIT OUVRANT (Cherche "glass", "window")
+            // Vitres
             if (name.includes('glass') || name.includes('window') || matName.includes('glass')) {
                 o.material = glassMaterial;
             }
-            
-            // 3. JANTES/CHROME (Optionnel, garde le matériau d'origine ou force le chrome)
         }
     });
 
     scene.add(carModel);
     
-    // Animation d'entrée
+    // 5. ANIMATION D'ENTRÉE (Corrigée avec la nouvelle taille)
     carModel.scale.set(0, 0, 0);
-    let scale = 0;
+    let currentScale = 0;
     const interval = setInterval(() => {
-        scale += 0.05;
-        if(scale >= 1) {
-            scale = 1;
+        currentScale += scaleFactor / 40; // Vitesse de l'animation
+        if(currentScale >= scaleFactor) {
+            currentScale = scaleFactor;
             clearInterval(interval);
         }
-        carModel.scale.set(scale, scale, scale);
+        carModel.scale.set(currentScale, currentScale, currentScale);
     }, 16);
 
 }, undefined, function (error) {
@@ -263,3 +275,4 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
 });
+
