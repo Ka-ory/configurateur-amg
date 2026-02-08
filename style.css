@@ -29,6 +29,54 @@ canvas { position: fixed; top: 0; left: 0; z-index: 1; }
 @keyframes blink { 50% { opacity: 0; } }
 .loading-numbers { font-family: 'Orbitron'; font-size: 5rem; color: #333; margin-top: 10px; }
 
+
+/* --- SYSTEMS DOCK --- */
+.systems-dock {
+    display: flex; gap: 10px; margin-bottom: 10px;
+}
+.sys-btn {
+    background: rgba(0, 243, 255, 0.1); border: 1px solid var(--primary); color: var(--primary);
+    padding: 10px 20px; font-family: 'Rajdhani'; font-weight: 700; cursor: pointer;
+    transition: 0.3s; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    display: flex; align-items: center; gap: 10px;
+}
+.sys-btn:hover, .sys-btn.active {
+    background: var(--primary); color: #000; box-shadow: 0 0 20px var(--primary);
+}
+
+/* BOUTON DANGER (WARP) */
+.sys-btn.danger {
+    border-color: var(--secondary); color: var(--secondary); background: rgba(255, 0, 85, 0.1);
+}
+.sys-btn.danger:hover, .sys-btn.danger.active {
+    background: var(--secondary); color: #fff; box-shadow: 0 0 30px var(--secondary);
+}
+
+/* EFFET DE VITESSE (LIGNES ÉCRAN) */
+.speed-lines {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(90deg, transparent 0, transparent 50px, rgba(255,255,255,0.05) 50px, rgba(255,255,255,0.05) 51px);
+    opacity: 0; pointer-events: none; z-index: 0;
+    transition: opacity 0.5s;
+    mix-blend-mode: overlay;
+}
+.warping .speed-lines { opacity: 1; animation: speedAnim 0.1s infinite linear; }
+
+@keyframes speedAnim {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50px); }
+}
+
+/* UI SHAKE EFFECT */
+.warping #ui-container { animation: uiShake 0.2s infinite; }
+@keyframes uiShake {
+    0% { transform: translate(0,0); }
+    25% { transform: translate(2px, 2px); }
+    50% { transform: translate(-2px, -1px); }
+    75% { transform: translate(1px, -2px); }
+    100% { transform: translate(0,0); }
+}
+
 /* --- HUD LAYOUT --- */
 #ui-container {
     position: absolute; width: 100%; height: 100%; z-index: 10; pointer-events: none;
@@ -128,3 +176,4 @@ canvas { position: fixed; top: 0; left: 0; z-index: 1; }
     animation: scan 5s linear infinite; pointer-events: none;
 }
 @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
