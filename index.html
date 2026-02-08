@@ -1,38 +1,18 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MERCEDES-AMG CLA 45 S | CONFIGURATOR</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div id="loader">
-        <div class="loader-content">
-            <h1>AMG <span class="hollow">PERFORMANCE</span></h1>
-            <div class="loading-bar"><div class="progress"></div></div>
-            <button id="start-btn">DÉMARRER LE MOTEUR</button>
-        </div>
-    </div>
-
-    <canvas id="webgl"></canvas>
-
-    <div id="ui-container" class="hidden">
+<div id="ui-container" class="hidden">
         
         <nav class="top-bar">
             <div class="logo">/// AMG</div>
-            <div class="model-name">CLA 45 S 4MATIC+</div>
+            <div class="model-name">CLA 45 AMG 4MATIC</div>
         </nav>
 
         <div class="specs-container">
             <div class="spec-box">
                 <span class="label">PUISSANCE</span>
-                <span class="value">421 <small>ch</small></span>
+                <span class="value">381 <small>ch</small></span>
             </div>
             <div class="spec-box">
                 <span class="label">0-100 KM/H</span>
-                <span class="value">3.9 <small>s</small></span>
+                <span class="value">4.2 <small>s</small></span>
             </div>
             <div class="spec-box">
                 <span class="label">VITESSE MAX</span>
@@ -43,13 +23,13 @@
         <div class="controls">
             <h3>PEINTURE MAGNO</h3>
             <div class="color-picker">
-                <div class="color-btn active" style="background: #1a1a1a;" data-color="0x1a1a1a" data-name="NIGHT BLACK"></div>
-                <div class="color-btn" style="background: #b0b0b0;" data-color="0xb0b0b0" data-name="IRIDIUM SILVER"></div>
+                <div class="color-btn active" style="background: #1a1a1a;" data-color="0x1a1a1a" data-name="COSMOS BLACK"></div>
+                <div class="color-btn" style="background: #b0b0b0;" data-color="0xb0b0b0" data-name="POLAR SILVER"></div>
                 <div class="color-btn" style="background: #3e444c;" data-color="0x3e444c" data-name="MOUNTAIN GREY"></div>
                 <div class="color-btn" style="background: #d62c2c;" data-color="0xaa0000" data-name="JUPITER RED"></div>
-                <div class="color-btn" style="background: #ffcc00;" data-color="0xffcc00" data-name="SUN YELLOW"></div>
+                <div class="color-btn" style="background: #ffffff;" data-color="0xffffff" data-name="CALCITE WHITE"></div>
             </div>
-            <div class="current-color-name">NIGHT BLACK MAGNO</div>
+            <div class="current-color-name">COSMOS BLACK</div>
         </div>
 
         <div class="footer-actions">
@@ -58,15 +38,3 @@
         </div>
 
     </div>
-
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
-    <script type="module" src="script.js"></script>
-</body>
-</html>
