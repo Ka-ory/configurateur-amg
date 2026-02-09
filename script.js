@@ -7,7 +7,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-/* --- 1. SETUP DE LA SCÈNE --- */
+/* --- SETUP --- */
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -15,112 +15,70 @@ scene.background = new THREE.Color(0x111111);
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
 camera.position.set(-8, 3, 8); 
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.5;
+renderer.toneMappingExposure = 1.2;
 renderer.shadowMap.enabled = true;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-/* --- 2. LUMIÈRE --- */
+/* --- LUMIÈRE --- */
 const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(ambientLight);
-
 const sunLight = new THREE.DirectionalLight(0xffffff, 2);
 sunLight.position.set(10, 20, 10);
 sunLight.castShadow = true;
 scene.add(sunLight);
 
-// HDR
 new RGBELoader().load('decor.hdr', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
     scene.environment = texture;
-}, undefined, (err) => console.log("Pas de HDR, pas grave."));
+}, undefined, () => console.log("Note: Pas de HDR, lumière standard utilisée."));
 
-/* --- 3. CHARGEMENT ROBUSTE MAP.GLB --- */
+/* --- LOADERS --- */
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-dracoLoader.setDecoderConfig({ type: 'js' }); // Force le JS pour la compatibilité max
-
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 
-// Gestionnaire d'erreur global pour le chargement
-function loadMapSafely() {
-    gltfLoader.load('map.glb', (gltf) => {
-        try {
-            const map = gltf.scene;
-            console.log("✅ Map chargée !");
-
-            // Correction taille
-            const box = new THREE.Box3().setFromObject(map);
-            const size = box.getSize(new THREE.Vector3());
-            
-            if (size.x < 10) map.scale.set(100, 100, 100);
-            else if (size.x > 1000) map.scale.set(0.01, 0.01, 0.01);
-            else map.scale.set(1, 1, 1);
-
-            map.position.set(0, -0.1, 0);
-            
-            // On enlève les objets qui pourraient faire planter le rendu
-            map.traverse((o) => {
-                if (o.isMesh) {
-                    o.receiveShadow = true;
-                    // Vérification de sécurité géométrie
-                    if (!o.geometry || !o.geometry.attributes.position) return;
-                }
-            });
-
-            scene.add(map);
-
-        } catch (error) {
-            console.error("Erreur post-traitement map :", error);
-            addFallbackFloor(); // Si ça plante après chargement, on met le sol de secours
+/* --- CHARGEMENT MAP --- */
+gltfLoader.load('map.glb', (gltf) => {
+    const map = gltf.scene;
+    // Ajustement taille map (change si besoin)
+    map.scale.set(1, 1, 1); 
+    map.position.set(0, 0, 0);
+    
+    map.traverse((o) => {
+        if (o.isMesh) {
+            o.receiveShadow = true;
+             // Si la map est noire, décommenter la ligne suivante :
+             // if(!o.material.map) o.material = new THREE.MeshStandardMaterial({color:0x888888});
         }
-
-    }, undefined, (e) => {
-        console.error("❌ ERREUR CHARGEMENT MAP CRITIQUE :", e);
-        console.log("Passage au mode 'Sol de Secours'...");
-        addFallbackFloor(); // Si le fichier est illisible, on met le sol de secours
     });
-}
+    scene.add(map);
+    console.log("Map chargée !");
+}, undefined, (e) => console.error("Erreur Map:", e));
 
-function addFallbackFloor() {
-    // Crée une grille stylée si la map plante
-    const grid = new THREE.GridHelper(100, 100, 0x00f3ff, 0x222222);
-    scene.add(grid);
-    const plane = new THREE.Mesh(
-        new THREE.PlaneGeometry(200, 200),
-        new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.5 })
-    );
-    plane.rotation.x = -Math.PI / 2;
-    plane.position.y = -0.1;
-    scene.add(plane);
-}
-
-// Lancer le chargement sécurisé
-loadMapSafely();
-
-
-/* --- 4. CHARGEMENT VOITURE --- */
+/* --- CHARGEMENT VOITURE --- */
+let carModel = null;
 const bodyMaterial = new THREE.MeshPhysicalMaterial({ 
     color: 0x111111, metalness: 0.7, roughness: 0.3, clearcoat: 1.0, envMapIntensity: 1.0 
 });
 
 gltfLoader.load('cla45.glb', (gltf) => {
-    const car = gltf.scene;
+    carModel = gltf.scene;
     
-    const box = new THREE.Box3().setFromObject(car);
+    // Scale
+    const box = new THREE.Box3().setFromObject(carModel);
     const size = box.getSize(new THREE.Vector3());
     const scaleFactor = 4.8 / Math.max(size.x, size.y, size.z);
-    car.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    carModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-    const center = new THREE.Box3().setFromObject(car).getCenter(new THREE.Vector3());
-    car.position.sub(center);
-    car.position.y = 0;
+    // Position Initiale (0,0,0)
+    carModel.position.set(0, 0, 0);
 
-    car.traverse((o) => {
+    carModel.traverse((o) => {
         if(o.isMesh) {
             o.castShadow = true; o.receiveShadow = true;
             const n = o.name.toLowerCase();
@@ -131,12 +89,46 @@ gltfLoader.load('cla45.glb', (gltf) => {
         }
     });
 
-    scene.add(car);
+    scene.add(carModel);
     document.getElementById('loader').style.display = 'none';
     document.getElementById('ui-container').classList.remove('hidden');
+
+    // Message d'aide
+    console.log("------------------------------------------------");
+    console.log("🚗 MODE GARAGE ACTIVÉ");
+    console.log("Utilise ces touches pour placer ta voiture :");
+    console.log("I / K : Avancer / Reculer (Z)");
+    console.log("J / L : Gauche / Droite (X)");
+    console.log("U / O : Monter / Descendre (Y)");
+    console.log("R : Tourner");
+    console.log("------------------------------------------------");
+
 });
 
-/* --- 5. POST PROCESSING & RENDU --- */
+/* --- SYSTEME DE DEPLACEMENT MANUEL --- */
+window.addEventListener('keydown', (e) => {
+    if(!carModel) return;
+    const step = 0.5; // Vitesse de déplacement (mètres)
+    
+    switch(e.key.toLowerCase()) {
+        case 'i': carModel.position.z -= step; break;
+        case 'k': carModel.position.z += step; break;
+        case 'j': carModel.position.x -= step; break;
+        case 'l': carModel.position.x += step; break;
+        case 'u': carModel.position.y += step; break; // Monter
+        case 'o': carModel.position.y -= step; break; // Descendre
+        case 'r': carModel.rotation.y += 0.1; break;  // Tourner
+        case ' ': // Espace pour afficher les coordonnées
+            console.log(`📍 COORDONNÉES À COPIER DANS LE CODE :`);
+            console.log(`carModel.position.set(${carModel.position.x.toFixed(2)}, ${carModel.position.y.toFixed(2)}, ${carModel.position.z.toFixed(2)});`);
+            console.log(`carModel.rotation.y = ${carModel.rotation.y.toFixed(2)};`);
+            alert(`Position: X=${carModel.position.x.toFixed(1)} Y=${carModel.position.y.toFixed(1)} Z=${carModel.position.z.toFixed(1)}\n(Regarde la console F12 pour copier le code)`);
+            break;
+    }
+});
+
+
+/* --- RENDU --- */
 const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
@@ -146,7 +138,6 @@ composer.addPass(bloomPass);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.target.set(0, 0.5, 0);
 
 function animate() {
     requestAnimationFrame(animate);
@@ -160,19 +151,4 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// Boutons Couleurs
-document.querySelectorAll('.color-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelector('.current-paint').innerText = btn.dataset.name;
-        bodyMaterial.color.setHex(parseInt(btn.dataset.color));
-        if(btn.dataset.name.includes("MAT")) {
-            bodyMaterial.roughness = 0.6; bodyMaterial.clearcoat = 0.0;
-        } else {
-            bodyMaterial.roughness = 0.3; bodyMaterial.clearcoat = 1.0;
-        }
-    });
 });
