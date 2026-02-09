@@ -1,14 +1,13 @@
 :root {
-    --primary: #00f3ff; /* Cyan Cyber */
-    --secondary: #ff0055; /* Magenta AMG */
-    --dark: #050505;
-    --glass: rgba(10, 20, 30, 0.6);
+    --primary: #fff;
+    --accent: #ff0055;
+    --glass: rgba(0, 0, 0, 0.7);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 
 body {
-    background: var(--dark);
+    background: #000;
     color: #fff;
     font-family: 'Rajdhani', sans-serif;
     overflow: hidden;
@@ -17,67 +16,18 @@ body {
 
 canvas { position: fixed; top: 0; left: 0; z-index: 1; }
 
-/* --- LOADER STYLE --- */
+/* LOADER */
 #loader {
-    position: fixed; width: 100%; height: 100%; background: #000; z-index: 9999;
+    position: fixed; width: 100%; height: 100%; background: #050505; z-index: 9999;
     display: flex; justify-content: center; align-items: center;
     transition: transform 0.8s cubic-bezier(0.8, 0, 0.2, 1);
 }
-.loader-content { text-align: center; position: relative; }
-.loader-content h1 { font-family: 'Orbitron'; font-size: 3rem; letter-spacing: 5px; }
-.blink { animation: blink 0.5s infinite; color: var(--primary); }
+.loader-content { text-align: center; }
+.loader-content h1 { font-family: 'Orbitron'; font-size: 2rem; letter-spacing: 5px; }
+.blink { animation: blink 1s infinite; color: var(--accent); }
 @keyframes blink { 50% { opacity: 0; } }
-.loading-numbers { font-family: 'Orbitron'; font-size: 5rem; color: #333; margin-top: 10px; }
 
-
-/* --- SYSTEMS DOCK --- */
-.systems-dock {
-    display: flex; gap: 10px; margin-bottom: 10px;
-}
-.sys-btn {
-    background: rgba(0, 243, 255, 0.1); border: 1px solid var(--primary); color: var(--primary);
-    padding: 10px 20px; font-family: 'Rajdhani'; font-weight: 700; cursor: pointer;
-    transition: 0.3s; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-    display: flex; align-items: center; gap: 10px;
-}
-.sys-btn:hover, .sys-btn.active {
-    background: var(--primary); color: #000; box-shadow: 0 0 20px var(--primary);
-}
-
-/* BOUTON DANGER (WARP) */
-.sys-btn.danger {
-    border-color: var(--secondary); color: var(--secondary); background: rgba(255, 0, 85, 0.1);
-}
-.sys-btn.danger:hover, .sys-btn.danger.active {
-    background: var(--secondary); color: #fff; box-shadow: 0 0 30px var(--secondary);
-}
-
-/* EFFET DE VITESSE (LIGNES ÉCRAN) */
-.speed-lines {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: repeating-linear-gradient(90deg, transparent 0, transparent 50px, rgba(255,255,255,0.05) 50px, rgba(255,255,255,0.05) 51px);
-    opacity: 0; pointer-events: none; z-index: 0;
-    transition: opacity 0.5s;
-    mix-blend-mode: overlay;
-}
-.warping .speed-lines { opacity: 1; animation: speedAnim 0.1s infinite linear; }
-
-@keyframes speedAnim {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50px); }
-}
-
-/* UI SHAKE EFFECT */
-.warping #ui-container { animation: uiShake 0.2s infinite; }
-@keyframes uiShake {
-    0% { transform: translate(0,0); }
-    25% { transform: translate(2px, 2px); }
-    50% { transform: translate(-2px, -1px); }
-    75% { transform: translate(1px, -2px); }
-    100% { transform: translate(0,0); }
-}
-
-/* --- HUD LAYOUT --- */
+/* HUD */
 #ui-container {
     position: absolute; width: 100%; height: 100%; z-index: 10; pointer-events: none;
     transition: opacity 1s;
@@ -89,36 +39,34 @@ canvas { position: fixed; top: 0; left: 0; z-index: 1; }
 .bottom-left { bottom: 0; left: 0; }
 .bottom-right { bottom: 0; right: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 20px; }
 
-/* LOGO & FPS */
-.logo { font-family: 'Orbitron'; font-weight: 900; font-size: 2rem; font-style: italic; border-left: 5px solid var(--secondary); padding-left: 15px; }
-.sub { font-size: 1rem; color: var(--primary); font-weight: 400; opacity: 0.8; }
-.fps-counter { font-family: monospace; color: #555; margin-top: 5px; font-size: 0.8rem; }
+/* LOGO */
+.logo { font-family: 'Orbitron'; font-weight: 900; font-size: 2rem; font-style: italic; border-left: 4px solid var(--accent); padding-left: 15px; }
+.sub { font-size: 1rem; color: #aaa; font-weight: 400; }
 
-/* SPECS GRID */
-.spec-grid { display: flex; gap: 30px; text-align: right; }
-.spec-item { display: flex; flex-direction: column; position: relative; }
-.spec-item::after { content:''; position: absolute; right: -15px; top: 10%; height: 80%; width: 1px; background: rgba(255,255,255,0.2); }
-.spec-item:last-child::after { display: none; }
-.lbl { font-size: 0.8rem; color: var(--primary); letter-spacing: 2px; }
-.val { font-family: 'Orbitron'; font-size: 2.5rem; line-height: 1; }
-.val small { font-size: 1rem; color: #fff; }
+/* TIME CONTROL */
+.time-control {
+    background: var(--glass); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+    text-align: right;
+}
+.time-control label { font-size: 0.8rem; letter-spacing: 1px; color: #aaa; display: block; margin-bottom: 5px; }
+input[type=range] { width: 150px; accent-color: var(--accent); cursor: pointer; }
 
 /* COLOR DOCK */
 .color-dock {
     display: flex; gap: 10px; padding: 15px;
     background: var(--glass); backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.1);
-    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 50px;
     margin-top: 10px;
 }
 .color-btn {
-    width: 35px; height: 35px; border: 1px solid #555; cursor: pointer;
-    transition: 0.3s; position: relative;
+    width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; 
+    cursor: pointer; transition: 0.3s;
 }
-.color-btn.active { border-color: var(--primary); box-shadow: 0 0 15px var(--primary); transform: scale(1.1); }
-.current-paint { margin-top: 10px; font-size: 0.9rem; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+.color-btn:hover { transform: scale(1.2); }
+.color-btn.active { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.5); transform: scale(1.1); }
+.current-paint { margin-top: 10px; font-size: 0.9rem; color: #888; text-transform: uppercase; letter-spacing: 2px; margin-left: 10px; }
 
-/* CAMERA CONTROLS */
+/* CONTROLS */
 .camera-controls {
     display: flex; gap: 5px; background: var(--glass); padding: 5px;
     border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
@@ -127,53 +75,18 @@ canvas { position: fixed; top: 0; left: 0; z-index: 1; }
     background: transparent; border: none; color: #888; padding: 8px 15px;
     font-family: 'Rajdhani'; font-weight: 700; cursor: pointer; transition: 0.3s;
 }
-.cam-btn:hover, .cam-btn.active { background: rgba(255,255,255,0.1); color: var(--primary); }
+.cam-btn:hover, .cam-btn.active { background: rgba(255,255,255,0.1); color: #fff; }
 
 .big-btn {
-    background: transparent; border: 1px solid var(--secondary); color: var(--secondary);
-    padding: 15px 40px; font-family: 'Orbitron'; font-size: 1.2rem; cursor: pointer;
-    transition: 0.3s; letter-spacing: 2px;
-    clip-path: polygon(20px 0, 100% 0, 100% 100%, 0 100%, 0 20px);
+    background: #fff; border: none; color: #000;
+    padding: 15px 40px; font-family: 'Orbitron'; font-size: 1rem; font-weight: 900;
+    cursor: pointer; transition: 0.3s; letter-spacing: 1px; clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
 }
-.big-btn:hover { background: var(--secondary); color: #fff; box-shadow: 0 0 30px var(--secondary); }
+.big-btn:hover { background: var(--accent); color: #fff; box-shadow: 0 0 30px var(--accent); }
 
-/* --- HOTSPOTS (Points 3D) --- */
-.point {
-    position: absolute; top: 50%; left: 50%;
-    width: 40px; height: 40px; pointer-events: none; z-index: 5;
-    display: flex; align-items: center; opacity: 0; transition: opacity 0.5s;
+/* MOBILE */
+@media (max-width: 800px) {
+    .hud-corner { padding: 20px; }
+    .color-dock { flex-wrap: wrap; border-radius: 10px; justify-content: center; width: 250px;}
+    .spec-grid { display: none; }
 }
-.point.visible { opacity: 1; }
-.point::before {
-    content: '+'; position: absolute; left: 0; top: 0;
-    width: 20px; height: 20px; border: 1px solid var(--primary);
-    display: flex; justify-content: center; align-items: center;
-    background: rgba(0,0,0,0.5); color: var(--primary); font-size: 14px;
-    box-shadow: 0 0 10px var(--primary);
-}
-.point .label {
-    margin-left: 30px; font-family: 'Orbitron'; color: var(--primary); font-size: 0.8rem;
-    white-space: nowrap; border-bottom: 1px solid var(--primary);
-}
-.point .text {
-    position: absolute; top: 25px; left: 30px; width: 200px;
-    font-size: 0.8rem; color: #ccc; background: rgba(0,0,0,0.8);
-    padding: 5px; border-left: 2px solid var(--primary);
-    opacity: 0; transform: translateX(-10px); transition: 0.3s;
-}
-.point:hover { pointer-events: auto; }
-.point:hover .text { opacity: 1; transform: translateX(0); }
-
-/* --- DECORATIONS --- */
-.crosshair {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 200px; height: 200px; border: 1px dashed rgba(255,255,255,0.1); border-radius: 50%;
-    pointer-events: none;
-}
-.scan-line {
-    position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-    background: var(--primary); opacity: 0.3;
-    animation: scan 5s linear infinite; pointer-events: none;
-}
-@keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-
