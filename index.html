@@ -3,67 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROJECT: AMG VELOCITY</title>
+    <title>PROJECT: AMG LAKESIDE</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏁</text></svg>">
 </head>
 <body>
     <div id="loader">
         <div class="loader-content">
-            <div class="scanner-line"></div>
-            <h1>INITIALIZING <span class="blink">SYSTEM</span></h1>
+            <h1>LOADING <span class="blink">ENVIRONMENT</span></h1>
             <div class="loading-numbers">00%</div>
         </div>
     </div>
 
     <canvas id="webgl"></canvas>
 
-    <div class="point point-0">
-        <div class="label">MOTEUR TURBO</div>
-        <div class="text">4 Cylindres 2.0L - 381ch</div>
-    </div>
-    <div class="point point-1">
-        <div class="label">AÉRODYNAMISME</div>
-        <div class="text">Diffuseur AMG Performance</div>
-    </div>
-
     <div id="ui-container" class="hidden">
         
         <div class="hud-corner top-left">
-            <div class="logo">/// AMG <span class="sub">VELOCITY_X</span></div>
-            <div class="fps-counter">SYSTEM STATUS: <span id="sys-status" style="color:#0f0">ONLINE</span></div>
+            <div class="logo">/// AMG <span class="sub">PERFORMANCE</span></div>
         </div>
 
         <div class="hud-corner top-right">
-            <div class="spec-grid">
-                <div class="spec-item">
-                    <span class="lbl">POWER</span>
-                    <span class="val">381 <small>HP</small></span>
-                </div>
-                <div class="spec-item">
-                    <span class="lbl">0-100</span>
-                    <span class="val">4.2 <small>S</small></span>
-                </div>
+            <div class="time-control">
+                <label>HEURE DE LA JOURNÉE</label>
+                <input type="range" id="time-slider" min="0" max="100" value="50">
             </div>
         </div>
 
         <div class="hud-corner bottom-left">
-            <h3>EXPERIMENTAL SYSTEMS</h3>
-            <div class="systems-dock">
-                <button id="warp-btn" class="sys-btn danger">
-                    <span class="icon">⚡</span> WARP DRIVE
-                </button>
-                <button id="xray-btn" class="sys-btn">
-                    <span class="icon">🧬</span> X-RAY SCAN
-                </button>
-            </div>
-            
-            <h3 style="margin-top: 20px;">PAINT WORK</h3>
+            <h3>PEINTURE MANUFAKTUR</h3>
             <div class="color-dock">
                 <div class="color-btn active" style="background: #111;" data-color="0x111111" data-name="COSMOS BLACK"></div>
                 <div class="color-btn" style="background: #ccc;" data-color="0xcccccc" data-name="POLAR SILVER"></div>
-                <div class="color-btn" style="background: #aa0000;" data-color="0xaa0000" data-name="JUPITER RED"></div>
+                <div class="color-btn" style="background: #444;" data-color="0x444444" data-name="MOUNTAIN GREY"></div>
+                <div class="color-btn" style="background: #fff;" data-color="0xffffff" data-name="DIGITAL WHITE"></div>
+                <div class="color-btn" style="background: #aa0000;" data-color="0xaa0000" data-name="PATAGONIA RED"></div>
+                <div class="color-btn" style="background: #1c3d6e;" data-color="0x1c3d6e" data-name="DENIM BLUE"></div>
+                <div class="color-btn" style="background: #ffcc00;" data-color="0xffcc00" data-name="SUN YELLOW"></div>
+                <div class="color-btn" style="background: #333; border: 1px dashed #fff" data-color="0x222222" data-name="DESIGN MAGNO (MAT)"></div>
             </div>
+            <div class="current-paint">COSMOS BLACK</div>
         </div>
 
         <div class="hud-corner bottom-right">
@@ -73,12 +53,8 @@
                 <button class="cam-btn" data-view="back">ARRIÈRE</button>
                 <button class="cam-btn active" data-view="auto">AUTO</button>
             </div>
-            <button id="start-engine" class="big-btn">START ENGINE</button>
+            <button id="start-engine" class="big-btn">DÉMARRER</button>
         </div>
-
-        <div class="crosshair"></div>
-        <div class="scan-line"></div>
-        <div class="speed-lines"></div>
     </div>
 
     <script type="importmap">
@@ -92,4 +68,3 @@
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
