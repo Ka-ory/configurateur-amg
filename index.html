@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROJECT: AMG LAKESIDE</title>
+    <title>AMG LAKESIDE STUDIO</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏁</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📸</text></svg>">
 </head>
 <body>
     <div id="loader">
         <div class="loader-content">
-            <h1>LOADING <span class="blink">ENVIRONMENT</span></h1>
+            <h1>LOADING <span class="blink">MAP</span></h1>
             <div class="loading-numbers">00%</div>
         </div>
     </div>
@@ -21,18 +21,19 @@
     <div id="ui-container" class="hidden">
         
         <div class="hud-corner top-left">
-            <div class="logo">/// AMG <span class="sub">PERFORMANCE</span></div>
+            <div class="logo">/// AMG <span class="sub">CINEMATIC</span></div>
+            <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">PRESS [SPACE] FOR PHOTO MODE</div>
         </div>
 
         <div class="hud-corner top-right">
             <div class="time-control">
-                <label>HEURE DE LA JOURNÉE</label>
+                <label>HEURE</label>
                 <input type="range" id="time-slider" min="0" max="100" value="50">
             </div>
         </div>
 
         <div class="hud-corner bottom-left">
-            <h3>PEINTURE MANUFAKTUR</h3>
+            <h3>MANUFAKTUR PAINT</h3>
             <div class="color-dock">
                 <div class="color-btn active" style="background: #111;" data-color="0x111111" data-name="COSMOS BLACK"></div>
                 <div class="color-btn" style="background: #ccc;" data-color="0xcccccc" data-name="POLAR SILVER"></div>
@@ -53,7 +54,7 @@
                 <button class="cam-btn" data-view="back">ARRIÈRE</button>
                 <button class="cam-btn active" data-view="auto">AUTO</button>
             </div>
-            <button id="start-engine" class="big-btn">DÉMARRER</button>
+            <button id="start-engine" class="big-btn">START</button>
         </div>
     </div>
 
