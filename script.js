@@ -12,12 +12,12 @@ import { GUI } from 'three/addons/libs/lil-gui.module.min.js'; // Outil de Debug
 // Une fois que tu as trouvé les bonnes valeurs avec le menu à droite,
 // recopie-les ici pour les sauvegarder définitivement.
 const CONFIG = {
-    x: 327.50,
-    y: -15.50,
+    x: 341.40,
+    y: -15.32,
     z: -279.50,
-    rotX: 0.02, // Piqué (Avant/Arrière)
-    rotY: -0.6, // Orientation (Cap)
-    rotZ: 0.05  // Roulis (Inclinaison/Penché)
+    rotX: 0.033, // Piqué (Avant/Arrière)
+    rotY: -0.79756, // Orientation (Cap)
+    rotZ: 0.119  // Roulis (Inclinaison/Penché)
 };
 
 const canvas = document.querySelector('#webgl');
@@ -327,3 +327,4 @@ if(startBtn) {
         new Audio('startup.mp3').play().catch(e => console.log(e));
     });
 }
+
