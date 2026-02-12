@@ -6,18 +6,15 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { GUI } from 'three/addons/libs/lil-gui.module.min.js'; // Outil de Debug
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
-/* --- CONFIGURATION INITIALE --- */
-// Une fois que tu as trouvé les bonnes valeurs avec le menu à droite,
-// recopie-les ici pour les sauvegarder définitivement.
 const CONFIG = {
-    x: 341.40,
-    y: -15.32,
+    x: 327.50,
+    y: -15.50,
     z: -279.50,
-    rotX: 0.033, // Piqué (Avant/Arrière)
-    rotY: -0.79756, // Orientation (Cap)
-    rotZ: 0.119  // Roulis (Inclinaison/Penché)
+    rotX: 0.02,
+    rotY: -0.6,
+    rotZ: 0.05
 };
 
 const canvas = document.querySelector('#webgl');
@@ -137,7 +134,6 @@ const bodyMaterial = new THREE.MeshPhysicalMaterial({
 
 let carGroup;
 
-// --- INITIALISATION DU GUI DE DEBUG ---
 const gui = new GUI({ title: 'RÉGLAGES VOITURE' });
 const posFolder = gui.addFolder('Position');
 const rotFolder = gui.addFolder('Rotation / Inclinaison');
@@ -150,7 +146,6 @@ function updateCarTransform() {
     }
 }
 
-// Ajout des contrôles au GUI
 posFolder.add(CONFIG, 'x', 300, 350).onChange(updateCarTransform);
 posFolder.add(CONFIG, 'y', -30, 0).onChange(updateCarTransform);
 posFolder.add(CONFIG, 'z', -300, -250).onChange(updateCarTransform);
@@ -161,7 +156,6 @@ rotFolder.add(CONFIG, 'rotZ', -0.5, 0.5).name('Roulis (Penché)').onChange(updat
 
 posFolder.open();
 rotFolder.open();
-// --------------------------------------
 
 function loadCar(modelKey) {
     if(carGroup) {
@@ -192,7 +186,7 @@ function loadCar(modelKey) {
         carGroup = new THREE.Group();
         carGroup.add(car);
         
-        updateCarTransform(); // Applique la config du GUI
+        updateCarTransform();
         
         car.traverse((o) => {
             if(o.isMesh) {
@@ -252,7 +246,6 @@ window.addEventListener('resize', () => {
     composer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Le clavier reste actif si tu préfères, il mettra à jour le GUI
 window.addEventListener('keydown', (e) => {
     if(!carGroup) return;
     const moveStep = 0.2;
@@ -277,7 +270,6 @@ window.addEventListener('keydown', (e) => {
     
     if(changed) {
         updateCarTransform();
-        // Rafraîchir l'affichage du GUI
         gui.controllersRecursive().forEach(c => c.updateDisplay());
     }
 });
@@ -327,4 +319,3 @@ if(startBtn) {
         new Audio('startup.mp3').play().catch(e => console.log(e));
     });
 }
-
