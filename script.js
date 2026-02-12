@@ -7,42 +7,55 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-/* --- SETUP SCÈNE --- */
+/* --- SETUP SCÈNE (AMBIANCE HIVER) --- */
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050505); // Fond sombre propre
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
-camera.position.set(-7, 2, 7); // Vue catalogue
+// Fond : Un gris-bleu très clair pour simuler le ciel d'hiver si le HDR ne charge pas
+scene.background = new THREE.Color(0xddeeff); 
+
+// BROUILLARD VOLUMÉTRIQUE (L'effet "Montagne")
+// Couleur bleu glace très clair (0xeef4ff), densité faible (0.002)
+scene.fog = new THREE.FogExp2(0xeef4ff, 0.002);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 3000); // Vue loin pour la montagne
+camera.position.set(-6, 2, 6);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0; // Exposition équilibrée
+renderer.toneMappingExposure = 1.1; // Légèrement surexposé pour la réverbération de la neige
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-/* --- LUMIÈRE --- */
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Lumière de base
+/* --- LUMIÈRE (SOLEIL D'HIVER) --- */
+const ambientLight = new THREE.AmbientLight(0xcceeff, 1.2); // Lumière ambiante bleutée (froid)
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
-sunLight.position.set(20, 50, 20); // Soleil haut
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.8); // Soleil blanc pur
+sunLight.position.set(-50, 30, -50); // Soleil assez bas
 sunLight.castShadow = true;
-sunLight.shadow.mapSize.width = 4096; // Ombres très nettes
+// Ombres étendues pour couvrir toute la montagne
+sunLight.shadow.mapSize.width = 4096;
 sunLight.shadow.mapSize.height = 4096;
-sunLight.shadow.bias = -0.0005; // Enlève les artifacts d'ombre
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 1000;
+sunLight.shadow.camera.left = -200;
+sunLight.shadow.camera.right = 200;
+sunLight.shadow.camera.top = 200;
+sunLight.shadow.camera.bottom = -200;
+sunLight.shadow.bias = -0.0001;
 scene.add(sunLight);
 
-// HDR (Ciel)
+// HDR
 new RGBELoader().load('decor.hdr', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
     scene.environment = texture;
-    // On met aussi le HDR en fond pour que ce soit joli
+    // On garde le HDR en fond mais on laisse le brouillard agir dessus
     scene.background = texture;
-    scene.backgroundIntensity = 0.6; // Pas trop éblouissant
+    scene.backgroundIntensity = 0.8;
 }, undefined, () => console.log("Pas de HDR"));
 
 /* --- LOADERS --- */
@@ -51,13 +64,12 @@ dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 
-/* --- CHARGEMENT MAP (AMÉLIORÉ) --- */
-// Rentre ici tes coordonnées finales de la MAP (celles que tu as notées)
-// Si tu ne les as pas notées, remets celles par défaut ou ajuste
-const MAP_POS_X = -325.50;
-const MAP_POS_Y = 11.50;
-const MAP_POS_Z = 298.00;
-const MAP_ROT_Y = 0; // Si tu avais tourné la map
+/* --- CHARGEMENT MAP (CONFIGURÉE NEIGE) --- */
+// Tes coordonnées précises
+const MAP_POS_X = 348;
+const MAP_POS_Y = 16;
+const MAP_POS_Z = 278;
+const MAP_ROT_Y = 12.55;
 
 gltfLoader.load('map.glb', (gltf) => {
     const map = gltf.scene;
@@ -67,47 +79,49 @@ gltfLoader.load('map.glb', (gltf) => {
     map.rotation.y = MAP_ROT_Y;
     map.scale.set(1, 1, 1);
 
-    // --- EMBELLISSEMENT AUTOMATIQUE ---
+    // --- CONFIGURATION SPÉCIALE NEIGE/MONTAGNE ---
     map.traverse((o) => {
         if (o.isMesh) {
             o.receiveShadow = true;
-            o.castShadow = true; // La map projette aussi des ombres sur elle-même
+            o.castShadow = true; 
 
-            // Si l'objet a un matériau, on l'améliore
             if (o.material) {
-                // Règle la rugosité pour éviter l'effet "plastique mouillé" partout
-                // On met une rugosité élevée par défaut (mat) sauf si le fichier dit le contraire
-                o.material.roughness = 0.8; 
-                o.material.metalness = 0.1; // Peu de métal par défaut sur le décor
+                // LE SECRET DE LA NEIGE :
+                // 1. Pas de métal (metalness = 0)
+                // 2. Très rugueux (roughness = 1.0) -> Aspect poudreuse mate
+                o.material.roughness = 1.0; 
+                o.material.metalness = 0.0;
+                
+                // Si la texture est trop sombre, on peut tricher en éclaircissant le matériau
+                // o.material.color.addScalar(0.1); 
 
-                // Gestion Transparence (Arbres, Barrières)
-                if (o.material.transparent || o.material.opacity < 1) {
+                // Transparence (Arbres/Sapins)
+                if (o.material.transparent || o.material.opacity < 1 || o.material.name.toLowerCase().includes('leaf') || o.material.name.toLowerCase().includes('sapin')) {
                     o.material.transparent = true;
-                    o.material.alphaTest = 0.5; // Découpe nette des feuilles
-                    o.material.side = THREE.DoubleSide; // Voir les feuilles des 2 côtés
+                    o.material.alphaTest = 0.5;
+                    o.material.side = THREE.DoubleSide;
                 }
 
-                // Cas spécial : L'eau (si détectée)
+                // Glace / Eau (si détectée)
                 const n = o.name.toLowerCase();
-                const mn = o.material.name.toLowerCase();
-                if (n.includes('water') || n.includes('eau') || mn.includes('water')) {
-                    o.material.roughness = 0.1;
-                    o.material.metalness = 0.8;
-                    o.material.color.setHex(0x004466);
+                if (n.includes('ice') || n.includes('glace') || n.includes('water')) {
+                    o.material.roughness = 0.05; // Très lisse
+                    o.material.transmission = 0.6; // Un peu transparent
+                    o.material.color.setHex(0xaaccff); // Bleu glacé
                 }
             }
         }
     });
 
     scene.add(map);
-    console.log("Map chargée et embellie !");
+    console.log("Map Montagne chargée !");
 
 }, undefined, (e) => console.error("Erreur Map:", e));
 
 
 /* --- CHARGEMENT VOITURE --- */
 const bodyMaterial = new THREE.MeshPhysicalMaterial({ 
-    color: 0x111111, metalness: 0.7, roughness: 0.3, clearcoat: 1.0, envMapIntensity: 1.0 
+    color: 0x111111, metalness: 0.7, roughness: 0.3, clearcoat: 1.0, envMapIntensity: 1.5 
 });
 
 gltfLoader.load('cla45.glb', (gltf) => {
@@ -119,7 +133,7 @@ gltfLoader.load('cla45.glb', (gltf) => {
     const scaleFactor = 4.8 / Math.max(size.x, size.y, size.z);
     car.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-    // Voiture toujours à 0,0,0
+    // Voiture à 0,0,0 (C'est la map qui a bougé autour)
     const center = new THREE.Box3().setFromObject(car).getCenter(new THREE.Vector3());
     car.position.sub(center);
     car.position.y = 0;
@@ -140,21 +154,25 @@ gltfLoader.load('cla45.glb', (gltf) => {
     document.getElementById('ui-container').classList.remove('hidden');
 });
 
-/* --- POST PROCESSING (Rendu Cinéma) --- */
+/* --- POST PROCESSING (ÉCLAT FROID) --- */
 const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
+
+// Bloom un peu plus fort pour faire briller la neige au soleil
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-bloomPass.threshold = 0.9; bloomPass.strength = 0.3; bloomPass.radius = 0.2;
+bloomPass.threshold = 0.8; // Seuil plus bas pour que la neige blanche brille un peu
+bloomPass.strength = 0.35; 
+bloomPass.radius = 0.4;
 composer.addPass(bloomPass);
 
 /* --- CONTROLS --- */
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.maxPolarAngle = Math.PI / 2 - 0.05; // Pas sous le sol
+controls.maxPolarAngle = Math.PI / 2 - 0.05; 
 controls.minDistance = 3;
-controls.maxDistance = 12;
-controls.enablePan = false; // On bloque le pan pour garder la voiture au centre
+controls.maxDistance = 15;
+controls.enablePan = false;
 controls.target.set(0, 0.8, 0);
 
 function animate() {
@@ -164,7 +182,7 @@ function animate() {
 }
 animate();
 
-/* --- UI INTERACTIONS --- */
+/* --- UI --- */
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -194,12 +212,11 @@ document.querySelectorAll('.cam-btn').forEach(btn => {
         if(view === 'front') camera.position.set(-5, 1.2, 5);
         if(view === 'side') camera.position.set(6, 1.2, 0);
         if(view === 'back') camera.position.set(-5, 1.5, -5);
-        if(view === 'auto') { /* auto rotate logic if needed */ }
+        if(view === 'auto') { }
         controls.update();
     });
 });
 
-// Son
 document.getElementById('start-engine').addEventListener('click', () => {
     new Audio('startup.mp3').play().catch(e => console.log("Audio bloqué"));
 });
