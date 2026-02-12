@@ -100,32 +100,25 @@ const bodyMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x111111, metalness: 0.7, roughness: 0.3, clearcoat: 1.0, envMapIntensity: 1.5 
 });
 
-// TES COORDONNÉES FINALES
-const CAR_X = 315.00;
-const CAR_Y = -11.50;
-const CAR_Z = -290.00;
+const CAR_X = 327.50;
+const CAR_Y = -15.50;
+const CAR_Z = -279.50;
 
 gltfLoader.load('cla45.glb', (gltf) => {
     const car = gltf.scene;
     
-    // Scale
     const box = new THREE.Box3().setFromObject(car);
     const size = box.getSize(new THREE.Vector3());
     const scaleFactor = 4.8 / Math.max(size.x, size.y, size.z);
     car.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-    // Centrage du pivot de la voiture (très important pour la rotation)
     const center = new THREE.Box3().setFromObject(car).getCenter(new THREE.Vector3());
     car.position.sub(center); 
     
-    // On crée un GROUPE pour placer la voiture au bon endroit
-    // (Astuce pour garder la rotation propre)
     const carGroup = new THREE.Group();
     carGroup.add(car);
     
-    // Placement final sur la route
     carGroup.position.set(CAR_X, CAR_Y, CAR_Z);
-    // Ajuste la rotation ici si elle n'est pas dans le sens de la route (ex: Math.PI / 2)
     carGroup.rotation.y = 0; 
 
     car.traverse((o) => {
@@ -138,6 +131,15 @@ gltfLoader.load('cla45.glb', (gltf) => {
             }
         }
     });
+
+    scene.add(carGroup);
+    
+    controls.target.set(CAR_X, CAR_Y + 1, CAR_Z);
+    controls.update();
+
+    document.getElementById('loader').style.display = 'none';
+    document.getElementById('ui-container').classList.remove('hidden');
+});
 
     scene.add(carGroup);
     
@@ -216,3 +218,4 @@ document.querySelectorAll('.cam-btn').forEach(btn => {
 document.getElementById('start-engine').addEventListener('click', () => {
     new Audio('startup.mp3').play().catch(e => console.log("Audio bloqué"));
 });
+
