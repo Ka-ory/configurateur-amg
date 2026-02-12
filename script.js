@@ -6,14 +6,19 @@ import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js'; // Outil de Debug
 
-let CAR_X = 327.50;
-let CAR_Y = -15.50;
-let CAR_Z = -279.50;
-
-let CAR_ROT_X = 0.02; 
-let CAR_ROT_Y = -0.6;
-let CAR_ROT_Z = 0.05;
+/* --- CONFIGURATION INITIALE --- */
+// Une fois que tu as trouvé les bonnes valeurs avec le menu à droite,
+// recopie-les ici pour les sauvegarder définitivement.
+const CONFIG = {
+    x: 327.50,
+    y: -15.50,
+    z: -279.50,
+    rotX: 0.02, // Piqué (Avant/Arrière)
+    rotY: -0.6, // Orientation (Cap)
+    rotZ: 0.05  // Roulis (Inclinaison/Penché)
+};
 
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
@@ -114,7 +119,6 @@ gltfLoader.load('sources/map.glb', (gltf) => {
                     o.material.alphaTest = 0.5;
                     o.material.side = THREE.DoubleSide;
                 }
-                
                 o.material.needsUpdate = true;
             }
         }
@@ -132,6 +136,32 @@ const bodyMaterial = new THREE.MeshPhysicalMaterial({
 });
 
 let carGroup;
+
+// --- INITIALISATION DU GUI DE DEBUG ---
+const gui = new GUI({ title: 'RÉGLAGES VOITURE' });
+const posFolder = gui.addFolder('Position');
+const rotFolder = gui.addFolder('Rotation / Inclinaison');
+
+function updateCarTransform() {
+    if(carGroup) {
+        carGroup.position.set(CONFIG.x, CONFIG.y, CONFIG.z);
+        carGroup.rotation.set(CONFIG.rotX, CONFIG.rotY, CONFIG.rotZ);
+        controls.target.set(CONFIG.x, CONFIG.y + 1, CONFIG.z);
+    }
+}
+
+// Ajout des contrôles au GUI
+posFolder.add(CONFIG, 'x', 300, 350).onChange(updateCarTransform);
+posFolder.add(CONFIG, 'y', -30, 0).onChange(updateCarTransform);
+posFolder.add(CONFIG, 'z', -300, -250).onChange(updateCarTransform);
+
+rotFolder.add(CONFIG, 'rotX', -0.5, 0.5).name('Piqué (Av/Ar)').onChange(updateCarTransform);
+rotFolder.add(CONFIG, 'rotY', -3.14, 3.14).name('Cap (Direction)').onChange(updateCarTransform);
+rotFolder.add(CONFIG, 'rotZ', -0.5, 0.5).name('Roulis (Penché)').onChange(updateCarTransform);
+
+posFolder.open();
+rotFolder.open();
+// --------------------------------------
 
 function loadCar(modelKey) {
     if(carGroup) {
@@ -151,9 +181,8 @@ function loadCar(modelKey) {
         const box = new THREE.Box3().setFromObject(car);
         const size = box.getSize(new THREE.Vector3());
         
-        // Ajustement Scale selon le modèle
         let scaleFactor = 4.8 / Math.max(size.x, size.y, size.z);
-        if(modelKey === 'cls') scaleFactor *= 1.1; // La CLS est plus grosse
+        if(modelKey === 'cls') scaleFactor *= 1.1; 
 
         car.scale.set(scaleFactor, scaleFactor, scaleFactor);
         
@@ -163,8 +192,7 @@ function loadCar(modelKey) {
         carGroup = new THREE.Group();
         carGroup.add(car);
         
-        carGroup.position.set(CAR_X, CAR_Y, CAR_Z);
-        carGroup.rotation.set(CAR_ROT_X, CAR_ROT_Y, CAR_ROT_Z);
+        updateCarTransform(); // Applique la config du GUI
         
         car.traverse((o) => {
             if(o.isMesh) {
@@ -173,7 +201,6 @@ function loadCar(modelKey) {
                 const n = o.name.toLowerCase();
                 const mn = o.material && o.material.name ? o.material.name.toLowerCase() : "";
                 
-                // Application de la peinture
                 if(n.includes('body') || n.includes('paint') || mn.includes('paint') || mn.includes('body') || n.includes('carrosserie')) {
                     o.material = bodyMaterial;
                 }
@@ -194,15 +221,11 @@ function loadCar(modelKey) {
 
         scene.add(carGroup);
         
-        controls.target.set(CAR_X, CAR_Y + 1, CAR_Z);
-        controls.update();
-
         document.getElementById('loader').style.display = 'none';
         document.getElementById('ui-container').classList.remove('hidden');
     });
 }
 
-// Chargement initial
 loadCar('cla');
 
 const composer = new EffectComposer(renderer);
@@ -229,26 +252,34 @@ window.addEventListener('resize', () => {
     composer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// Le clavier reste actif si tu préfères, il mettra à jour le GUI
 window.addEventListener('keydown', (e) => {
     if(!carGroup) return;
     const moveStep = 0.2;
     const rotStep = 0.02;
 
+    let changed = false;
     switch(e.key.toLowerCase()) {
-        case 'arrowup': carGroup.position.z -= moveStep; break;
-        case 'arrowdown': carGroup.position.z += moveStep; break;
-        case 'arrowleft': carGroup.position.x -= moveStep; break;
-        case 'arrowright': carGroup.position.x += moveStep; break;
-        case 'pageup': carGroup.position.y += moveStep; break;
-        case 'pagedown': carGroup.position.y -= moveStep; break;
-        case 'q': carGroup.rotation.y += rotStep; break;
-        case 'd': carGroup.rotation.y -= rotStep; break;
-        case 'z': carGroup.rotation.x += rotStep; break;
-        case 's': carGroup.rotation.x -= rotStep; break;
-        case 'a': carGroup.rotation.z += rotStep; break;
-        case 'e': carGroup.rotation.z -= rotStep; break;
+        case 'arrowup': CONFIG.z -= moveStep; changed = true; break;
+        case 'arrowdown': CONFIG.z += moveStep; changed = true; break;
+        case 'arrowleft': CONFIG.x -= moveStep; changed = true; break;
+        case 'arrowright': CONFIG.x += moveStep; changed = true; break;
+        case 'pageup': CONFIG.y += moveStep; changed = true; break;
+        case 'pagedown': CONFIG.y -= moveStep; changed = true; break;
+        
+        case 'q': CONFIG.rotY += rotStep; changed = true; break;
+        case 'd': CONFIG.rotY -= rotStep; changed = true; break;
+        case 'z': CONFIG.rotX += rotStep; changed = true; break;
+        case 's': CONFIG.rotX -= rotStep; changed = true; break;
+        case 'a': CONFIG.rotZ += rotStep; changed = true; break;
+        case 'e': CONFIG.rotZ -= rotStep; changed = true; break;
     }
-    console.log(`POS X:${carGroup.position.x.toFixed(2)} Y:${carGroup.position.y.toFixed(2)} Z:${carGroup.position.z.toFixed(2)} | ROT X:${carGroup.rotation.x.toFixed(3)} Y:${carGroup.rotation.y.toFixed(3)} Z:${carGroup.rotation.z.toFixed(3)}`);
+    
+    if(changed) {
+        updateCarTransform();
+        // Rafraîchir l'affichage du GUI
+        gui.controllersRecursive().forEach(c => c.updateDisplay());
+    }
 });
 
 document.querySelectorAll('.color-btn').forEach(btn => {
@@ -275,14 +306,13 @@ document.querySelectorAll('.cam-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const view = btn.dataset.view;
         controls.autoRotate = false;
-        if(view === 'front') camera.position.set(CAR_X - 5, CAR_Y + 1.5, CAR_Z + 5);
-        if(view === 'side') camera.position.set(CAR_X + 6, CAR_Y + 1.5, CAR_Z);
-        if(view === 'back') camera.position.set(CAR_X - 5, CAR_Y + 2, CAR_Z - 5);
+        if(view === 'front') camera.position.set(CONFIG.x - 5, CONFIG.y + 1.5, CONFIG.z + 5);
+        if(view === 'side') camera.position.set(CONFIG.x + 6, CONFIG.y + 1.5, CONFIG.z);
+        if(view === 'back') camera.position.set(CONFIG.x - 5, CONFIG.y + 2, CONFIG.z - 5);
         if(view === 'auto') { controls.autoRotate = true; }
     });
 });
 
-// Écouteurs pour le changement de modèle
 document.querySelectorAll('.model-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
