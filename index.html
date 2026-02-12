@@ -6,12 +6,11 @@
     <title>AMG LAKESIDE STUDIO</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📸</text></svg>">
 </head>
 <body>
     <div id="loader">
         <div class="loader-content">
-            <h1>LOADING <span class="blink">MAP</span></h1>
+            <h1>LOADING <span class="blink">ASSETS</span></h1>
             <div class="loading-numbers">00%</div>
         </div>
     </div>
@@ -22,7 +21,10 @@
         
         <div class="hud-corner top-left">
             <div class="logo">/// AMG <span class="sub">CINEMATIC</span></div>
-            <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">PRESS [SPACE] FOR PHOTO MODE</div>
+            <div class="model-selector" style="margin-top: 20px;">
+                <button class="model-btn active" data-model="cla">CLA 45 S</button>
+                <button class="model-btn" data-model="cls">CLS 63 S</button>
+            </div>
         </div>
 
         <div class="hud-corner top-right">
