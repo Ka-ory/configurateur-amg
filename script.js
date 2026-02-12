@@ -7,16 +7,22 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-/* --- CONFIGURATION POSITION --- */
-let CAR_X = 341.90;
+/* --- CONFIGURATION POSITION & ROTATION --- */
+// Position (Déjà calée)
+let CAR_X = 327.50;
 let CAR_Y = -15.50;
-let CAR_Z = -284.30;
+let CAR_Z = -279.50;
+
+// Rotation (C'est ici pour le style "en vif")
+// Valeurs en radians (0.1 = un petit peu, 1.5 = 90 degrés)
+let CAR_ROT_X = 0.02;  // Piqué très léger vers l'avant (agressif)
+let CAR_ROT_Y = -0.6;  // Orientée vers la route
+let CAR_ROT_Z = 0.05;  // Légèrement penchée (banking du virage)
 
 /* --- SETUP SCENE --- */
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
 
-// Couleur de fond gris-bleu (pas blanc !) pour éviter l'éblouissement
 const fogColor = new THREE.Color(0xa0b0c0); 
 scene.background = fogColor;
 scene.fog = new THREE.FogExp2(fogColor, 0.002);
@@ -28,7 +34,6 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPrefere
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-// EXPOSITION BASSE : C'est la clé pour éviter l'effet flashbang
 renderer.toneMappingExposure = 0.6; 
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -45,11 +50,9 @@ controls.autoRotate = true;
 controls.autoRotateSpeed = 0.5;
 
 /* --- LUMIERES --- */
-// Lumière ambiante faible (pour le contraste)
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
-// Soleil : Intensité modérée
 const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
 sunLight.position.set(150, 100, -150);
 sunLight.castShadow = true;
@@ -63,11 +66,10 @@ sunLight.shadow.camera.top = 100;
 sunLight.shadow.camera.bottom = -100;
 scene.add(sunLight);
 
-// HDR (Environnement) : Intensité réduite
 new RGBELoader().load('decor.hdr', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
     scene.environment = texture;
-    scene.environmentIntensity = 0.5; // Pas trop fort pour ne pas brûler la carrosserie
+    scene.environmentIntensity = 0.5;
 });
 
 /* --- TEXTURES --- */
@@ -109,10 +111,9 @@ gltfLoader.load('map.glb', (gltf) => {
                     o.material.roughnessMap = roadRough;
                     o.material.roughness = 0.9; 
                     o.material.metalness = 0;
-                    o.material.color.setHex(0x888888); // Route gris foncé
+                    o.material.color.setHex(0x888888);
                 } 
                 else if (name.includes('snow') || name.includes('terrain') || name.includes('ground')) {
-                    // C'EST ICI QUE CA SE JOUE : Gris clair au lieu de Blanc pur
                     o.material.color.setHex(0xcccccc); 
                     o.material.roughness = 1.0;
                     o.material.metalness = 0.0;
@@ -146,19 +147,20 @@ let carGroup;
 gltfLoader.load('cla45.glb', (gltf) => {
     const car = gltf.scene;
     
-    // Scale
     const box = new THREE.Box3().setFromObject(car);
     const size = box.getSize(new THREE.Vector3());
     const scaleFactor = 4.8 / Math.max(size.x, size.y, size.z);
     car.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-    // Center
     const center = new THREE.Box3().setFromObject(car).getCenter(new THREE.Vector3());
     car.position.sub(center); 
     
     carGroup = new THREE.Group();
     carGroup.add(car);
+    
+    // Application Position ET Rotation
     carGroup.position.set(CAR_X, CAR_Y, CAR_Z);
+    carGroup.rotation.set(CAR_ROT_X, CAR_ROT_Y, CAR_ROT_Z);
     
     car.traverse((o) => {
         if(o.isMesh) {
@@ -196,19 +198,17 @@ gltfLoader.load('cla45.glb', (gltf) => {
     if(uiEl) uiEl.classList.remove('hidden');
 });
 
-/* --- POST PROCESSING (BLOOM CALME) --- */
+/* --- POST PROCESSING --- */
 const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
 
-// Bloom configuré pour être TRES discret
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-bloomPass.threshold = 0.98; // Ne s'active que sur les trucs ULTRA brillants (soleil sur chrome)
-bloomPass.strength = 0.12;  // Très faible intensité
-bloomPass.radius = 0.1;     // Pas de gros halo baveux
+bloomPass.threshold = 0.98;
+bloomPass.strength = 0.12;
+bloomPass.radius = 0.1;
 composer.addPass(bloomPass);
 
-/* --- ANIMATION --- */
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
@@ -216,7 +216,7 @@ function animate() {
 }
 animate();
 
-/* --- EVENTS --- */
+/* --- EVENTS & INTERACTION --- */
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -224,19 +224,36 @@ window.addEventListener('resize', () => {
     composer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Outil dev position
+// Outil de Positionnement & Rotation "En Vif"
 window.addEventListener('keydown', (e) => {
     if(!carGroup) return;
-    const step = 0.1;
-    switch(e.key) {
-        case 'ArrowUp': carGroup.position.z -= step; break;
-        case 'ArrowDown': carGroup.position.z += step; break;
-        case 'ArrowLeft': carGroup.position.x -= step; break;
-        case 'ArrowRight': carGroup.position.x += step; break;
-        case 'PageUp': carGroup.position.y += step; break;
-        case 'PageDown': carGroup.position.y -= step; break;
+    
+    const moveStep = 0.2;
+    const rotStep = 0.02; // Rotation précise
+
+    switch(e.key.toLowerCase()) {
+        // POSITION
+        case 'arrowup': carGroup.position.z -= moveStep; break;
+        case 'arrowdown': carGroup.position.z += moveStep; break;
+        case 'arrowleft': carGroup.position.x -= moveStep; break;
+        case 'arrowright': carGroup.position.x += moveStep; break;
+        case 'pageup': carGroup.position.y += moveStep; break;
+        case 'pagedown': carGroup.position.y -= moveStep; break;
+
+        // ROTATION
+        case 'q': carGroup.rotation.y += rotStep; break; // Tourner Gauche
+        case 'd': carGroup.rotation.y -= rotStep; break; // Tourner Droite
+        case 'z': carGroup.rotation.x += rotStep; break; // Piquer Avant
+        case 's': carGroup.rotation.x -= rotStep; break; // Lever Nez
+        case 'a': carGroup.rotation.z += rotStep; break; // Pencher Gauche (Roulis)
+        case 'e': carGroup.rotation.z -= rotStep; break; // Pencher Droite
     }
-    console.log(`X: ${carGroup.position.x.toFixed(2)}, Y: ${carGroup.position.y.toFixed(2)}, Z: ${carGroup.position.z.toFixed(2)}`);
+
+    // Log pour récupérer tes réglages
+    console.log(`
+    POS -> X:${carGroup.position.x.toFixed(2)} Y:${carGroup.position.y.toFixed(2)} Z:${carGroup.position.z.toFixed(2)}
+    ROT -> X:${carGroup.rotation.x.toFixed(3)} Y:${carGroup.rotation.y.toFixed(3)} Z:${carGroup.rotation.z.toFixed(3)}
+    `);
 });
 
 document.querySelectorAll('.color-btn').forEach(btn => {
@@ -276,5 +293,3 @@ if(startBtn) {
         new Audio('startup.mp3').play().catch(e => console.log(e));
     });
 }
-
-
