@@ -7,34 +7,43 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-/* --- SETUP --- */
+/* --- SETUP SCÈNE --- */
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111);
+scene.background = new THREE.Color(0x050505); // Fond sombre propre
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
-camera.position.set(-6, 2, 6); // Caméra proche pour bien voir
+camera.position.set(-7, 2, 7); // Vue catalogue
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.0; // Exposition équilibrée
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 /* --- LUMIÈRE --- */
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Lumière de base
 scene.add(ambientLight);
-const sunLight = new THREE.DirectionalLight(0xffffff, 2);
-sunLight.position.set(10, 20, 10);
+
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+sunLight.position.set(20, 50, 20); // Soleil haut
 sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 4096; // Ombres très nettes
+sunLight.shadow.mapSize.height = 4096;
+sunLight.shadow.bias = -0.0005; // Enlève les artifacts d'ombre
 scene.add(sunLight);
 
+// HDR (Ciel)
 new RGBELoader().load('decor.hdr', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
     scene.environment = texture;
-}, undefined, () => console.log("Note: Pas de HDR, lumière standard utilisée."));
+    // On met aussi le HDR en fond pour que ce soit joli
+    scene.background = texture;
+    scene.backgroundIntensity = 0.6; // Pas trop éblouissant
+}, undefined, () => console.log("Pas de HDR"));
 
 /* --- LOADERS --- */
 const dracoLoader = new DRACOLoader();
@@ -42,47 +51,80 @@ dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
 const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 
-/* --- CHARGEMENT MAP --- */
-let mapModel = null;
-// Tes coordonnées approximatives INVERSÉES (car on bouge la map, pas la voiture)
-const startX = -325.50;
-const startY = 11.50; // Inversé de -11.50
-const startZ = 298.00; // Inversé de -298.00
+/* --- CHARGEMENT MAP (AMÉLIORÉ) --- */
+// Rentre ici tes coordonnées finales de la MAP (celles que tu as notées)
+// Si tu ne les as pas notées, remets celles par défaut ou ajuste
+const MAP_POS_X = -325.50;
+const MAP_POS_Y = 11.50;
+const MAP_POS_Z = 298.00;
+const MAP_ROT_Y = 0; // Si tu avais tourné la map
 
 gltfLoader.load('map.glb', (gltf) => {
-    mapModel = gltf.scene;
-    mapModel.scale.set(1, 1, 1); 
+    const map = gltf.scene;
     
-    // On applique la position de départ
-    mapModel.position.set(startX, startY, startZ);
-    
-    mapModel.traverse((o) => {
+    // Positionnement
+    map.position.set(MAP_POS_X, MAP_POS_Y, MAP_POS_Z);
+    map.rotation.y = MAP_ROT_Y;
+    map.scale.set(1, 1, 1);
+
+    // --- EMBELLISSEMENT AUTOMATIQUE ---
+    map.traverse((o) => {
         if (o.isMesh) {
             o.receiveShadow = true;
+            o.castShadow = true; // La map projette aussi des ombres sur elle-même
+
+            // Si l'objet a un matériau, on l'améliore
+            if (o.material) {
+                // Règle la rugosité pour éviter l'effet "plastique mouillé" partout
+                // On met une rugosité élevée par défaut (mat) sauf si le fichier dit le contraire
+                o.material.roughness = 0.8; 
+                o.material.metalness = 0.1; // Peu de métal par défaut sur le décor
+
+                // Gestion Transparence (Arbres, Barrières)
+                if (o.material.transparent || o.material.opacity < 1) {
+                    o.material.transparent = true;
+                    o.material.alphaTest = 0.5; // Découpe nette des feuilles
+                    o.material.side = THREE.DoubleSide; // Voir les feuilles des 2 côtés
+                }
+
+                // Cas spécial : L'eau (si détectée)
+                const n = o.name.toLowerCase();
+                const mn = o.material.name.toLowerCase();
+                if (n.includes('water') || n.includes('eau') || mn.includes('water')) {
+                    o.material.roughness = 0.1;
+                    o.material.metalness = 0.8;
+                    o.material.color.setHex(0x004466);
+                }
+            }
         }
     });
-    scene.add(mapModel);
-    console.log("Map chargée ! Positionnée à :", mapModel.position);
+
+    scene.add(map);
+    console.log("Map chargée et embellie !");
+
 }, undefined, (e) => console.error("Erreur Map:", e));
 
+
 /* --- CHARGEMENT VOITURE --- */
-let carModel = null;
 const bodyMaterial = new THREE.MeshPhysicalMaterial({ 
     color: 0x111111, metalness: 0.7, roughness: 0.3, clearcoat: 1.0, envMapIntensity: 1.0 
 });
 
 gltfLoader.load('cla45.glb', (gltf) => {
-    carModel = gltf.scene;
+    const car = gltf.scene;
     
-    const box = new THREE.Box3().setFromObject(carModel);
+    // Scale & Center
+    const box = new THREE.Box3().setFromObject(car);
     const size = box.getSize(new THREE.Vector3());
     const scaleFactor = 4.8 / Math.max(size.x, size.y, size.z);
-    carModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    car.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-    // La voiture reste TOUJOURS à 0,0,0
-    carModel.position.set(0, 0, 0);
+    // Voiture toujours à 0,0,0
+    const center = new THREE.Box3().setFromObject(car).getCenter(new THREE.Vector3());
+    car.position.sub(center);
+    car.position.y = 0;
 
-    carModel.traverse((o) => {
+    car.traverse((o) => {
         if(o.isMesh) {
             o.castShadow = true; o.receiveShadow = true;
             const n = o.name.toLowerCase();
@@ -93,48 +135,12 @@ gltfLoader.load('cla45.glb', (gltf) => {
         }
     });
 
-    scene.add(carModel);
+    scene.add(car);
     document.getElementById('loader').style.display = 'none';
     document.getElementById('ui-container').classList.remove('hidden');
-
-    console.log("------------------------------------------------");
-    console.log("🚗 MODE AJUSTEMENT PRÉCIS");
-    console.log("I / K : Avancer/Reculer la Map");
-    console.log("J / L : Gauche/Droite la Map");
-    console.log("U / O : Monter/Descendre la Map");
-    console.log("R : Tourner la Map");
-    console.log("MAINTIENS SHIFT pour aller doucement !");
-    console.log("ESPACE pour valider la position");
-    console.log("------------------------------------------------");
 });
 
-/* --- SYSTEME DE DEPLACEMENT (MAP) --- */
-window.addEventListener('keydown', (e) => {
-    if(!mapModel) return;
-    
-    // Vitesse : Rapide par défaut, Lente si Shift appuyé
-    const baseStep = e.shiftKey ? 0.05 : 0.5; 
-    const rotStep = e.shiftKey ? 0.01 : 0.05;
-
-    switch(e.key.toLowerCase()) {
-        case 'i': mapModel.position.z += baseStep; break; // Inverse car on bouge la map
-        case 'k': mapModel.position.z -= baseStep; break;
-        case 'j': mapModel.position.x += baseStep; break;
-        case 'l': mapModel.position.x -= baseStep; break;
-        case 'u': mapModel.position.y -= baseStep; break; // Descendre map = Monter voiture
-        case 'o': mapModel.position.y += baseStep; break;
-        case 'r': mapModel.rotation.y += rotStep; break;
-        case ' ': 
-            console.log(`📍 POSITION FINALE À GARDER :`);
-            console.log(`mapModel.position.set(${mapModel.position.x.toFixed(3)}, ${mapModel.position.y.toFixed(3)}, ${mapModel.position.z.toFixed(3)});`);
-            console.log(`mapModel.rotation.y = ${mapModel.rotation.y.toFixed(3)};`);
-            alert(`Map X=${mapModel.position.x.toFixed(2)} Y=${mapModel.position.y.toFixed(2)} Z=${mapModel.position.z.toFixed(2)}\nRotation=${mapModel.rotation.y.toFixed(2)}\n(Copié dans la console F12)`);
-            break;
-    }
-});
-
-
-/* --- RENDU --- */
+/* --- POST PROCESSING (Rendu Cinéma) --- */
 const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
@@ -142,8 +148,14 @@ const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, windo
 bloomPass.threshold = 0.9; bloomPass.strength = 0.3; bloomPass.radius = 0.2;
 composer.addPass(bloomPass);
 
+/* --- CONTROLS --- */
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI / 2 - 0.05; // Pas sous le sol
+controls.minDistance = 3;
+controls.maxDistance = 12;
+controls.enablePan = false; // On bloque le pan pour garder la voiture au centre
+controls.target.set(0, 0.8, 0);
 
 function animate() {
     requestAnimationFrame(animate);
@@ -152,9 +164,42 @@ function animate() {
 }
 animate();
 
+/* --- UI INTERACTIONS --- */
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Couleurs
+document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelector('.current-paint').innerText = btn.dataset.name;
+        bodyMaterial.color.setHex(parseInt(btn.dataset.color));
+        if(btn.dataset.name.includes("MAT")) {
+            bodyMaterial.roughness = 0.6; bodyMaterial.clearcoat = 0.0;
+        } else {
+            bodyMaterial.roughness = 0.3; bodyMaterial.clearcoat = 1.0;
+        }
+    });
+});
+
+// Caméras
+document.querySelectorAll('.cam-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        if(view === 'front') camera.position.set(-5, 1.2, 5);
+        if(view === 'side') camera.position.set(6, 1.2, 0);
+        if(view === 'back') camera.position.set(-5, 1.5, -5);
+        if(view === 'auto') { /* auto rotate logic if needed */ }
+        controls.update();
+    });
+});
+
+// Son
+document.getElementById('start-engine').addEventListener('click', () => {
+    new Audio('startup.mp3').play().catch(e => console.log("Audio bloqué"));
 });
