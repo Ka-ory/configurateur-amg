@@ -13,7 +13,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 2000);
-camera.position.set(-8, 3, 8); 
+camera.position.set(-6, 2, 6); // Caméra proche pour bien voir
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -43,21 +43,26 @@ const gltfLoader = new GLTFLoader();
 gltfLoader.setDRACOLoader(dracoLoader);
 
 /* --- CHARGEMENT MAP --- */
+let mapModel = null;
+// Tes coordonnées approximatives INVERSÉES (car on bouge la map, pas la voiture)
+const startX = -325.50;
+const startY = 11.50; // Inversé de -11.50
+const startZ = 298.00; // Inversé de -298.00
+
 gltfLoader.load('map.glb', (gltf) => {
-    const map = gltf.scene;
-    // Ajustement taille map (change si besoin)
-    map.scale.set(1, 1, 1); 
-    map.position.set(0, 0, 0);
+    mapModel = gltf.scene;
+    mapModel.scale.set(1, 1, 1); 
     
-    map.traverse((o) => {
+    // On applique la position de départ
+    mapModel.position.set(startX, startY, startZ);
+    
+    mapModel.traverse((o) => {
         if (o.isMesh) {
             o.receiveShadow = true;
-             // Si la map est noire, décommenter la ligne suivante :
-             // if(!o.material.map) o.material = new THREE.MeshStandardMaterial({color:0x888888});
         }
     });
-    scene.add(map);
-    console.log("Map chargée !");
+    scene.add(mapModel);
+    console.log("Map chargée ! Positionnée à :", mapModel.position);
 }, undefined, (e) => console.error("Erreur Map:", e));
 
 /* --- CHARGEMENT VOITURE --- */
@@ -69,13 +74,12 @@ const bodyMaterial = new THREE.MeshPhysicalMaterial({
 gltfLoader.load('cla45.glb', (gltf) => {
     carModel = gltf.scene;
     
-    // Scale
     const box = new THREE.Box3().setFromObject(carModel);
     const size = box.getSize(new THREE.Vector3());
     const scaleFactor = 4.8 / Math.max(size.x, size.y, size.z);
     carModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-    // Position Initiale (0,0,0)
+    // La voiture reste TOUJOURS à 0,0,0
     carModel.position.set(0, 0, 0);
 
     carModel.traverse((o) => {
@@ -93,36 +97,38 @@ gltfLoader.load('cla45.glb', (gltf) => {
     document.getElementById('loader').style.display = 'none';
     document.getElementById('ui-container').classList.remove('hidden');
 
-    // Message d'aide
     console.log("------------------------------------------------");
-    console.log("🚗 MODE GARAGE ACTIVÉ");
-    console.log("Utilise ces touches pour placer ta voiture :");
-    console.log("I / K : Avancer / Reculer (Z)");
-    console.log("J / L : Gauche / Droite (X)");
-    console.log("U / O : Monter / Descendre (Y)");
-    console.log("R : Tourner");
+    console.log("🚗 MODE AJUSTEMENT PRÉCIS");
+    console.log("I / K : Avancer/Reculer la Map");
+    console.log("J / L : Gauche/Droite la Map");
+    console.log("U / O : Monter/Descendre la Map");
+    console.log("R : Tourner la Map");
+    console.log("MAINTIENS SHIFT pour aller doucement !");
+    console.log("ESPACE pour valider la position");
     console.log("------------------------------------------------");
-
 });
 
-/* --- SYSTEME DE DEPLACEMENT MANUEL --- */
+/* --- SYSTEME DE DEPLACEMENT (MAP) --- */
 window.addEventListener('keydown', (e) => {
-    if(!carModel) return;
-    const step = 0.5; // Vitesse de déplacement (mètres)
+    if(!mapModel) return;
     
+    // Vitesse : Rapide par défaut, Lente si Shift appuyé
+    const baseStep = e.shiftKey ? 0.05 : 0.5; 
+    const rotStep = e.shiftKey ? 0.01 : 0.05;
+
     switch(e.key.toLowerCase()) {
-        case 'i': carModel.position.z -= step; break;
-        case 'k': carModel.position.z += step; break;
-        case 'j': carModel.position.x -= step; break;
-        case 'l': carModel.position.x += step; break;
-        case 'u': carModel.position.y += step; break; // Monter
-        case 'o': carModel.position.y -= step; break; // Descendre
-        case 'r': carModel.rotation.y += 0.1; break;  // Tourner
-        case ' ': // Espace pour afficher les coordonnées
-            console.log(`📍 COORDONNÉES À COPIER DANS LE CODE :`);
-            console.log(`carModel.position.set(${carModel.position.x.toFixed(2)}, ${carModel.position.y.toFixed(2)}, ${carModel.position.z.toFixed(2)});`);
-            console.log(`carModel.rotation.y = ${carModel.rotation.y.toFixed(2)};`);
-            alert(`Position: X=${carModel.position.x.toFixed(1)} Y=${carModel.position.y.toFixed(1)} Z=${carModel.position.z.toFixed(1)}\n(Regarde la console F12 pour copier le code)`);
+        case 'i': mapModel.position.z += baseStep; break; // Inverse car on bouge la map
+        case 'k': mapModel.position.z -= baseStep; break;
+        case 'j': mapModel.position.x += baseStep; break;
+        case 'l': mapModel.position.x -= baseStep; break;
+        case 'u': mapModel.position.y -= baseStep; break; // Descendre map = Monter voiture
+        case 'o': mapModel.position.y += baseStep; break;
+        case 'r': mapModel.rotation.y += rotStep; break;
+        case ' ': 
+            console.log(`📍 POSITION FINALE À GARDER :`);
+            console.log(`mapModel.position.set(${mapModel.position.x.toFixed(3)}, ${mapModel.position.y.toFixed(3)}, ${mapModel.position.z.toFixed(3)});`);
+            console.log(`mapModel.rotation.y = ${mapModel.rotation.y.toFixed(3)};`);
+            alert(`Map X=${mapModel.position.x.toFixed(2)} Y=${mapModel.position.y.toFixed(2)} Z=${mapModel.position.z.toFixed(2)}\nRotation=${mapModel.rotation.y.toFixed(2)}\n(Copié dans la console F12)`);
             break;
     }
 });
