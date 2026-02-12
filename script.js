@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 /* --- CONFIGURATION POSITION --- */
 let CAR_X = 341.90;
-let CAR_Y = -14.50;
+let CAR_Y = -15.50;
 let CAR_Z = -284.30;
 
 /* --- SETUP SCENE --- */
@@ -276,4 +276,5 @@ if(startBtn) {
         new Audio('startup.mp3').play().catch(e => console.log(e));
     });
 }
+
 
