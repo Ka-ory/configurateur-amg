@@ -8,9 +8,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
 /* --- CONFIGURATION POSITION --- */
-let CAR_X = 327.50;
-let CAR_Y = -15.50;
-let CAR_Z = -279.50;
+let CAR_X = 341.90;
+let CAR_Y = -14.50;
+let CAR_Z = -284.30;
 
 /* --- SETUP SCENE --- */
 const canvas = document.querySelector('#webgl');
@@ -276,3 +276,4 @@ if(startBtn) {
         new Audio('startup.mp3').play().catch(e => console.log(e));
     });
 }
+
