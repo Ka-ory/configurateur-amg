@@ -9,12 +9,12 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
 
 const CONFIG = {
-    x: 327.50,
-    y: -15.50,
+    x: 341.40,
+    y: -15.32,
     z: -279.50,
-    rotX: 0.02,
-    rotY: -0.6,
-    rotZ: 0.05
+    rotX: 0.033,
+    rotY: -0.79756,
+    rotZ: 0.119
 };
 
 const canvas = document.querySelector('#webgl');
@@ -154,8 +154,8 @@ rotFolder.add(CONFIG, 'rotX', -0.5, 0.5).name('Piqué (Av/Ar)').onChange(updateC
 rotFolder.add(CONFIG, 'rotY', -3.14, 3.14).name('Cap (Direction)').onChange(updateCarTransform);
 rotFolder.add(CONFIG, 'rotZ', -0.5, 0.5).name('Roulis (Penché)').onChange(updateCarTransform);
 
-posFolder.open();
-rotFolder.open();
+// posFolder.open();
+// rotFolder.open();
 
 function loadCar(modelKey) {
     if(carGroup) {
