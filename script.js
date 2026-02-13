@@ -123,13 +123,25 @@ gltfLoader.load('sources/map.glb', (gltf) => {
     scene.add(map);
 });
 
+/* --- MATERIAUX --- */
 const bodyMaterial = new THREE.MeshPhysicalMaterial({ 
-    color: 0x111111, 
-    metalness: 0.6, 
-    roughness: 0.25, 
-    clearcoat: 1.0, 
-    clearcoatRoughness: 0.03,
-    envMapIntensity: 1.0
+    color: 0x111111, metalness: 0.6, roughness: 0.25, clearcoat: 1.0, clearcoatRoughness: 0.03, envMapIntensity: 1.0
+});
+
+const glassMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x000000, metalness: 0.9, roughness: 0.0, transmission: 0.0, transparent: true, opacity: 0.7
+});
+
+const plasticMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x111111, metalness: 0.1, roughness: 0.8, clearcoat: 0.0
+});
+
+const chromeMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff, metalness: 1.0, roughness: 0.0, clearcoat: 1.0
+});
+
+const lightMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 5
 });
 
 let carGroup;
@@ -149,13 +161,9 @@ function updateCarTransform() {
 posFolder.add(CONFIG, 'x', 300, 350).onChange(updateCarTransform);
 posFolder.add(CONFIG, 'y', -30, 0).onChange(updateCarTransform);
 posFolder.add(CONFIG, 'z', -300, -250).onChange(updateCarTransform);
-
 rotFolder.add(CONFIG, 'rotX', -0.5, 0.5).name('Piqué (Av/Ar)').onChange(updateCarTransform);
 rotFolder.add(CONFIG, 'rotY', -3.14, 3.14).name('Cap (Direction)').onChange(updateCarTransform);
 rotFolder.add(CONFIG, 'rotZ', -0.5, 0.5).name('Roulis (Penché)').onChange(updateCarTransform);
-
-// posFolder.open();
-// rotFolder.open();
 
 function loadCar(modelKey) {
     if(carGroup) {
@@ -195,20 +203,37 @@ function loadCar(modelKey) {
                 const n = o.name.toLowerCase();
                 const mn = o.material && o.material.name ? o.material.name.toLowerCase() : "";
                 
-                if(n.includes('body') || n.includes('paint') || mn.includes('paint') || mn.includes('body') || n.includes('carrosserie')) {
+                // PEINTURE
+                if(n.includes('body') || n.includes('paint') || mn.includes('paint') || mn.includes('body') || n.includes('carrosserie') || n.includes('shell')) {
                     o.material = bodyMaterial;
                 }
-                if(n.includes('glass') || mn.includes('window') || n.includes('vitre')) {
-                    o.material.transparent = true;
-                    o.material.opacity = 0.7;
-                    o.material.roughness = 0.0;
-                    o.material.metalness = 0.9;
-                    o.material.color.setHex(0x000000);
+                // VITRES
+                else if(n.includes('glass') || mn.includes('window') || n.includes('vitre') || mn.includes('glass')) {
+                    o.material = glassMaterial;
                 }
-                if(n.includes('tire') || n.includes('rubber') || n.includes('pneu')) {
+                // PNEUS / CAOUTCHOUC
+                else if(n.includes('tire') || n.includes('rubber') || n.includes('pneu') || mn.includes('rubber')) {
                     o.material.roughness = 0.9;
                     o.material.metalness = 0.0;
-                    o.material.color.setHex(0x202020);
+                    o.material.color.setHex(0x101010);
+                }
+                // CHROME / JANTES / DETAILS BRILLANTS
+                else if(n.includes('chrome') || n.includes('silver') || n.includes('rim') || n.includes('jante') || n.includes('logo') || n.includes('star') || mn.includes('chrome')) {
+                    o.material = chromeMaterial;
+                }
+                // PLASTIQUE NOIR / GRILLE / INTERIEUR
+                else if(n.includes('plastic') || n.includes('grill') || n.includes('noir') || n.includes('black') || n.includes('bumper') || n.includes('vent') || mn.includes('plastic')) {
+                    o.material = plasticMaterial;
+                }
+                // LUMIERES
+                else if(n.includes('light') || n.includes('phare') || n.includes('brake') || n.includes('feu')) {
+                    o.material = lightMaterial;
+                }
+                // --- CORRECTION CLS : ANTI-BLANC ---
+                else if(modelKey === 'cls') {
+                    // Si l'objet n'a pas été reconnu par les filtres ci-dessus, on lui met le plastique noir par défaut
+                    // ça évite les triangles blancs moches.
+                    o.material = plasticMaterial;
                 }
             }
         });
