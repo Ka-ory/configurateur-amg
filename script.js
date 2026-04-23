@@ -145,7 +145,7 @@ const bodyMaterial = new THREE.MeshPhysicalMaterial({
 });
 
 const glassMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x000000, metalness: 0.9, roughness: 0.0, transmission: 0.0, transparent: true, opacity: 0.3, envMapIntensity: 2.0
+    color: 0xffffff, metalness: 0.1, roughness: 0.0, transmission: 0.9, transparent: true, opacity: 0.3, thickness: 0.5, envMapIntensity: 2.0
 });
 
 const rimMaterial = new THREE.MeshPhysicalMaterial({
@@ -153,7 +153,7 @@ const rimMaterial = new THREE.MeshPhysicalMaterial({
 });
 
 const plasticMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x111111, metalness: 0.1, roughness: 0.8, clearcoat: 0.0
+    color: 0x080808, metalness: 0.1, roughness: 0.7, clearcoat: 0.0
 });
 
 const chromeMaterial = new THREE.MeshPhysicalMaterial({
@@ -161,15 +161,15 @@ const chromeMaterial = new THREE.MeshPhysicalMaterial({
 });
 
 const tireMaterial = new THREE.MeshStandardMaterial({
-    color: 0x151515, roughness: 0.9, metalness: 0.0
+    color: 0x050505, roughness: 0.9, metalness: 0.0
 });
 
 const lightMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2
 });
 
-const defaultMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x222222, metalness: 0.5, roughness: 0.8
+const brakeMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x333333, metalness: 0.8, roughness: 0.4
 });
 
 let carGroup;
@@ -236,40 +236,33 @@ function loadCar(modelKey) {
                 o.receiveShadow = true;
                 const n = o.name.toLowerCase();
                 const mn = o.material && o.material.name ? o.material.name.toLowerCase() : "";
-                
-                let assigned = false;
 
-                if(n.includes('body') || n.includes('paint') || mn.includes('paint') || mn.includes('body') || n.includes('carrosserie') || n.includes('shell')) {
-                    o.material = bodyMaterial;
-                    assigned = true;
-                }
-                else if(n.includes('glass') || mn.includes('window') || n.includes('vitre') || mn.includes('glass')) {
-                    o.material = glassMaterial;
-                    assigned = true;
-                }
-                else if(n.includes('rim') || n.includes('jante') || mn.includes('rim') || mn.includes('wheel')) {
-                    o.material = rimMaterial;
-                    assigned = true;
-                }
-                else if(n.includes('tire') || n.includes('rubber') || n.includes('pneu') || mn.includes('rubber')) {
+                if (n.includes('tire') || n.includes('pneu') || mn.includes('rubber')) {
                     o.material = tireMaterial;
-                    assigned = true;
                 }
-                else if(n.includes('chrome') || n.includes('silver') || n.includes('logo') || n.includes('star') || mn.includes('chrome') || n.includes('exhaust')) {
+                else if (n.includes('rim') || n.includes('jante') || mn.includes('rim') || mn.includes('wheel')) {
+                    o.material = rimMaterial;
+                }
+                else if (n.includes('body') || n.includes('paint') || mn.includes('paint') || mn.includes('body') || n.includes('carrosserie') || n.includes('shell')) {
+                    o.material = bodyMaterial;
+                }
+                else if (n.includes('glass') || n.includes('lens') || n.includes('phare') || mn.includes('window') || n.includes('vitre') || mn.includes('glass')) {
+                    o.material = glassMaterial;
+                }
+                else if (n.includes('chrome') || n.includes('silver') || n.includes('logo') || n.includes('star') || n.includes('badge') || mn.includes('chrome') || n.includes('exhaust')) {
                     o.material = chromeMaterial;
-                    assigned = true;
                 }
-                else if(n.includes('plastic') || n.includes('grill') || n.includes('noir') || n.includes('black') || n.includes('bumper') || n.includes('vent') || mn.includes('plastic') || n.includes('interior')) {
-                    o.material = plasticMaterial;
-                    assigned = true;
+                else if (n.includes('brake') || n.includes('caliper') || n.includes('disc')) {
+                    o.material = brakeMaterial;
                 }
-                else if(n.includes('light') || n.includes('phare') || n.includes('brake') || n.includes('feu') || mn.includes('light')) {
+                else if (n.includes('light') || n.includes('feu') || mn.includes('light')) {
                     o.material = lightMaterial;
-                    assigned = true;
                 }
-
-                if(!assigned) {
-                    o.material = defaultMaterial;
+                else if (n.includes('plastic') || n.includes('grill') || n.includes('noir') || n.includes('black') || n.includes('bumper') || n.includes('vent') || n.includes('mirror') || n.includes('trim') || n.includes('skirt') || n.includes('molding') || n.includes('bas_de_caisse') || n.includes('retro') || mn.includes('plastic') || n.includes('interior')) {
+                    o.material = plasticMaterial;
+                }
+                else {
+                    o.material = plasticMaterial;
                 }
             }
         });
