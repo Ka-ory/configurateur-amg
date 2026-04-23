@@ -10,8 +10,11 @@
 <body>
     <div id="loader">
         <div class="loader-content">
-            <h1>LOADING <span class="blink">ASSETS</span></h1>
-            <div class="loading-numbers">00%</div>
+            <h1>AMG <span class="accent">STUDIO</span></h1>
+            <div class="loading-bar-container">
+                <div class="loading-bar" id="loading-bar"></div>
+            </div>
+            <div class="loading-text">CHARGEMENT <span id="loading-numbers">0</span>%</div>
         </div>
     </div>
 
@@ -19,45 +22,74 @@
 
     <div id="ui-container" class="hidden">
         
-        <div class="hud-corner top-left">
+        <header class="top-bar">
             <div class="logo">/// AMG <span class="sub">CINEMATIC</span></div>
-            <div class="model-selector" style="margin-top: 20px;">
+            <div class="model-selector">
                 <button class="model-btn active" data-model="cla">CLA 45 S</button>
                 <button class="model-btn" data-model="cls">CLS 63 S</button>
             </div>
-        </div>
+        </header>
 
-        <div class="hud-corner top-right">
-            <div class="time-control">
-                <label>HEURE</label>
+        <aside class="sidebar-left">
+            <div class="config-panel">
+                
+                <div class="config-section">
+                    <h3>PEINTURE CARROSSERIE</h3>
+                    <div class="current-value" id="val-paint">COSMOS BLACK</div>
+                    <div class="swatch-grid">
+                        <div class="swatch active" style="background: #111;" data-type="paint" data-color="0x111111" data-name="COSMOS BLACK"></div>
+                        <div class="swatch" style="background: #ccc;" data-type="paint" data-color="0xcccccc" data-name="POLAR SILVER"></div>
+                        <div class="swatch" style="background: #444;" data-type="paint" data-color="0x444444" data-name="MOUNTAIN GREY"></div>
+                        <div class="swatch" style="background: #fff;" data-type="paint" data-color="0xffffff" data-name="DIGITAL WHITE"></div>
+                        <div class="swatch" style="background: #aa0000;" data-type="paint" data-color="0xaa0000" data-name="PATAGONIA RED"></div>
+                        <div class="swatch" style="background: #1c3d6e;" data-type="paint" data-color="0x1c3d6e" data-name="DENIM BLUE"></div>
+                        <div class="swatch" style="background: #333; border: 1px dashed #fff" data-type="paint" data-color="0x222222" data-name="MAGNO MAT" data-mat="true"></div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>JANTES FORGÉES</h3>
+                    <div class="current-value" id="val-rim">SILVER CHROME</div>
+                    <div class="swatch-grid">
+                        <div class="swatch active" style="background: #ddd;" data-type="rim" data-color="0xdddddd" data-name="SILVER CHROME"></div>
+                        <div class="swatch" style="background: #111;" data-type="rim" data-color="0x111111" data-name="MATTE BLACK"></div>
+                        <div class="swatch" style="background: #8b7355;" data-type="rim" data-color="0x8b7355" data-name="BRONZE MAGNO"></div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>TEINTE DES VITRES</h3>
+                    <div class="current-value" id="val-glass">LÉGÈRE</div>
+                    <div class="swatch-grid">
+                        <div class="swatch active" style="background: rgba(0,0,0,0.3);" data-type="glass" data-op="0.3" data-name="LÉGÈRE"></div>
+                        <div class="swatch" style="background: rgba(0,0,0,0.7);" data-type="glass" data-op="0.7" data-name="INTERMÉDIAIRE"></div>
+                        <div class="swatch" style="background: rgba(0,0,0,0.95);" data-type="glass" data-op="0.95" data-name="NOIRE"></div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <aside class="sidebar-right">
+            <div class="env-control">
+                <h3>ENVIRONNEMENT</h3>
+                <label>HEURE DE LA JOURNÉE</label>
                 <input type="range" id="time-slider" min="0" max="100" value="50">
             </div>
-        </div>
+            <button id="start-engine" class="action-btn">
+                <span class="btn-text">START ENGINE</span>
+                <div class="btn-glow"></div>
+            </button>
+        </aside>
 
-        <div class="hud-corner bottom-left">
-            <h3>MANUFAKTUR PAINT</h3>
-            <div class="color-dock">
-                <div class="color-btn active" style="background: #111;" data-color="0x111111" data-name="COSMOS BLACK"></div>
-                <div class="color-btn" style="background: #ccc;" data-color="0xcccccc" data-name="POLAR SILVER"></div>
-                <div class="color-btn" style="background: #444;" data-color="0x444444" data-name="MOUNTAIN GREY"></div>
-                <div class="color-btn" style="background: #fff;" data-color="0xffffff" data-name="DIGITAL WHITE"></div>
-                <div class="color-btn" style="background: #aa0000;" data-color="0xaa0000" data-name="PATAGONIA RED"></div>
-                <div class="color-btn" style="background: #1c3d6e;" data-color="0x1c3d6e" data-name="DENIM BLUE"></div>
-                <div class="color-btn" style="background: #ffcc00;" data-color="0xffcc00" data-name="SUN YELLOW"></div>
-                <div class="color-btn" style="background: #333; border: 1px dashed #fff" data-color="0x222222" data-name="DESIGN MAGNO (MAT)"></div>
-            </div>
-            <div class="current-paint">COSMOS BLACK</div>
-        </div>
-
-        <div class="hud-corner bottom-right">
+        <footer class="bottom-bar">
             <div class="camera-controls">
                 <button class="cam-btn" data-view="front">AVANT</button>
                 <button class="cam-btn" data-view="side">PROFIL</button>
                 <button class="cam-btn" data-view="back">ARRIÈRE</button>
-                <button class="cam-btn active" data-view="auto">AUTO</button>
+                <button class="cam-btn active" data-view="auto">ROTATION AUTO</button>
             </div>
-            <button id="start-engine" class="big-btn">START</button>
-        </div>
+        </footer>
     </div>
 
     <script type="importmap">
