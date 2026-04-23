@@ -20,40 +20,45 @@ const CONFIG = {
 const canvas = document.querySelector('#webgl');
 const scene = new THREE.Scene();
 
-const fogColor = new THREE.Color(0xa0b0c0); 
+const fogColor = new THREE.Color(0x8da1b5); 
 scene.background = fogColor;
-scene.fog = new THREE.FogExp2(fogColor, 0.002);
+scene.fog = new THREE.FogExp2(fogColor, 0.0015);
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 3000);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 3000);
 camera.position.set(325, -9, -280);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.6; 
+renderer.toneMappingExposure = 0.8; 
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
+controls.dampingFactor = 0.05;
 controls.enablePan = false;
 controls.minDistance = 4;
 controls.maxDistance = 15;
 controls.maxPolarAngle = Math.PI / 2 - 0.05;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.5;
+controls.autoRotateSpeed = 0.8;
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
 scene.add(ambientLight);
 
-const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
+hemiLight.position.set(0, 200, 0);
+scene.add(hemiLight);
+
+const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
 sunLight.position.set(150, 100, -150);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.width = 4096;
 sunLight.shadow.mapSize.height = 4096;
-sunLight.shadow.bias = -0.0001;
+sunLight.shadow.bias = -0.0002;
 sunLight.shadow.normalBias = 0.05;
 sunLight.shadow.camera.left = -100;
 sunLight.shadow.camera.right = 100;
@@ -64,10 +69,21 @@ scene.add(sunLight);
 new RGBELoader().load('sources/decor.hdr', (texture) => {
     texture.mapping = THREE.EquirectangularReflectionMapping;
     scene.environment = texture;
-    scene.environmentIntensity = 0.5;
+    scene.environmentIntensity = 1.2;
 });
 
-const textureLoader = new THREE.TextureLoader();
+const manager = new THREE.LoadingManager();
+const loaderElement = document.getElementById('loader');
+const loadingBar = document.getElementById('loading-bar');
+const loadingNumbers = document.getElementById('loading-numbers');
+
+manager.onProgress = function (url, itemsLoaded, itemsTotal) {
+    const percentage = Math.round((itemsLoaded / itemsTotal) * 100);
+    if(loadingNumbers) loadingNumbers.innerText = percentage;
+    if(loadingBar) loadingBar.style.width = percentage + '%';
+};
+
+const textureLoader = new THREE.TextureLoader(manager);
 const roadColor = textureLoader.load('sources/road_color.jpg');
 const roadNormal = textureLoader.load('sources/road_normal.jpg');
 const roadRough = textureLoader.load('sources/road_rough.jpg');
@@ -80,9 +96,9 @@ const roadRough = textureLoader.load('sources/road_rough.jpg');
 });
 roadNormal.colorSpace = THREE.LinearSRGBColorSpace;
 
-const dracoLoader = new DRACOLoader();
+const dracoLoader = new DRACOLoader(manager);
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-const gltfLoader = new GLTFLoader();
+const gltfLoader = new GLTFLoader(manager);
 gltfLoader.setDRACOLoader(dracoLoader);
 
 gltfLoader.load('sources/map.glb', (gltf) => {
@@ -101,19 +117,20 @@ gltfLoader.load('sources/map.glb', (gltf) => {
                     o.material.map = roadColor;
                     o.material.normalMap = roadNormal;
                     o.material.roughnessMap = roadRough;
-                    o.material.roughness = 0.9; 
+                    o.material.roughness = 0.8; 
                     o.material.metalness = 0;
-                    o.material.color.setHex(0x888888);
+                    o.material.color.setHex(0xaaaaaa);
                 } 
                 else if (name.includes('snow') || name.includes('terrain') || name.includes('ground')) {
-                    o.material.color.setHex(0xcccccc); 
+                    o.material.color.setHex(0xdddddd); 
                     o.material.roughness = 1.0;
                     o.material.metalness = 0.0;
                 }
 
                 if (name.includes('leaf') || name.includes('sapin') || o.material.transparent) {
-                    o.material.transparent = true;
+                    o.material.transparent = false;
                     o.material.alphaTest = 0.5;
+                    o.material.depthWrite = true;
                     o.material.side = THREE.DoubleSide;
                 }
                 o.material.needsUpdate = true;
@@ -123,13 +140,16 @@ gltfLoader.load('sources/map.glb', (gltf) => {
     scene.add(map);
 });
 
-/* --- MATERIAUX --- */
 const bodyMaterial = new THREE.MeshPhysicalMaterial({ 
-    color: 0x111111, metalness: 0.6, roughness: 0.25, clearcoat: 1.0, clearcoatRoughness: 0.03, envMapIntensity: 1.0
+    color: 0x111111, metalness: 0.7, roughness: 0.15, clearcoat: 1.0, clearcoatRoughness: 0.02, envMapIntensity: 1.5
 });
 
 const glassMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0x000000, metalness: 0.9, roughness: 0.0, transmission: 0.0, transparent: true, opacity: 0.7
+    color: 0x000000, metalness: 0.9, roughness: 0.0, transmission: 0.0, transparent: true, opacity: 0.3, envMapIntensity: 2.0
+});
+
+const rimMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xdddddd, metalness: 1.0, roughness: 0.2, clearcoat: 1.0
 });
 
 const plasticMaterial = new THREE.MeshPhysicalMaterial({
@@ -140,15 +160,19 @@ const chromeMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xffffff, metalness: 1.0, roughness: 0.0, clearcoat: 1.0
 });
 
+const tireMaterial = new THREE.MeshStandardMaterial({
+    color: 0x151515, roughness: 0.9, metalness: 0.0
+});
+
 const lightMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 5
+    color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2
+});
+
+const defaultMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x222222, metalness: 0.5, roughness: 0.8
 });
 
 let carGroup;
-
-const gui = new GUI({ title: 'RÉGLAGES VOITURE' });
-const posFolder = gui.addFolder('Position');
-const rotFolder = gui.addFolder('Rotation / Inclinaison');
 
 function updateCarTransform() {
     if(carGroup) {
@@ -158,24 +182,34 @@ function updateCarTransform() {
     }
 }
 
-posFolder.add(CONFIG, 'x', 300, 350).onChange(updateCarTransform);
-posFolder.add(CONFIG, 'y', -30, 0).onChange(updateCarTransform);
-posFolder.add(CONFIG, 'z', -300, -250).onChange(updateCarTransform);
-rotFolder.add(CONFIG, 'rotX', -0.5, 0.5).name('Piqué (Av/Ar)').onChange(updateCarTransform);
-rotFolder.add(CONFIG, 'rotY', -3.14, 3.14).name('Cap (Direction)').onChange(updateCarTransform);
-rotFolder.add(CONFIG, 'rotZ', -0.5, 0.5).name('Roulis (Penché)').onChange(updateCarTransform);
-
-function loadCar(modelKey) {
+function clearCar() {
     if(carGroup) {
+        carGroup.traverse((child) => {
+            if (child.isMesh) {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => mat.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            }
+        });
         scene.remove(carGroup);
         carGroup = null;
     }
+}
+
+function loadCar(modelKey) {
+    clearCar();
 
     let path = '';
     if(modelKey === 'cla') path = 'sources/cars/cla/cla45.glb';
     if(modelKey === 'cls') path = 'sources/cars/cls/mersedes_cls63.glb';
 
-    document.getElementById('loader').style.display = 'flex';
+    loaderElement.style.display = 'flex';
+    loaderElement.style.opacity = '1';
 
     gltfLoader.load(path, (gltf) => {
         const car = gltf.scene;
@@ -203,44 +237,50 @@ function loadCar(modelKey) {
                 const n = o.name.toLowerCase();
                 const mn = o.material && o.material.name ? o.material.name.toLowerCase() : "";
                 
-                // PEINTURE
+                let assigned = false;
+
                 if(n.includes('body') || n.includes('paint') || mn.includes('paint') || mn.includes('body') || n.includes('carrosserie') || n.includes('shell')) {
                     o.material = bodyMaterial;
+                    assigned = true;
                 }
-                // VITRES
                 else if(n.includes('glass') || mn.includes('window') || n.includes('vitre') || mn.includes('glass')) {
                     o.material = glassMaterial;
+                    assigned = true;
                 }
-                // PNEUS / CAOUTCHOUC
+                else if(n.includes('rim') || n.includes('jante') || mn.includes('rim') || mn.includes('wheel')) {
+                    o.material = rimMaterial;
+                    assigned = true;
+                }
                 else if(n.includes('tire') || n.includes('rubber') || n.includes('pneu') || mn.includes('rubber')) {
-                    o.material.roughness = 0.9;
-                    o.material.metalness = 0.0;
-                    o.material.color.setHex(0x101010);
+                    o.material = tireMaterial;
+                    assigned = true;
                 }
-                // CHROME / JANTES / DETAILS BRILLANTS
-                else if(n.includes('chrome') || n.includes('silver') || n.includes('rim') || n.includes('jante') || n.includes('logo') || n.includes('star') || mn.includes('chrome')) {
+                else if(n.includes('chrome') || n.includes('silver') || n.includes('logo') || n.includes('star') || mn.includes('chrome') || n.includes('exhaust')) {
                     o.material = chromeMaterial;
+                    assigned = true;
                 }
-                // PLASTIQUE NOIR / GRILLE / INTERIEUR
-                else if(n.includes('plastic') || n.includes('grill') || n.includes('noir') || n.includes('black') || n.includes('bumper') || n.includes('vent') || mn.includes('plastic')) {
+                else if(n.includes('plastic') || n.includes('grill') || n.includes('noir') || n.includes('black') || n.includes('bumper') || n.includes('vent') || mn.includes('plastic') || n.includes('interior')) {
                     o.material = plasticMaterial;
+                    assigned = true;
                 }
-                // LUMIERES
-                else if(n.includes('light') || n.includes('phare') || n.includes('brake') || n.includes('feu')) {
+                else if(n.includes('light') || n.includes('phare') || n.includes('brake') || n.includes('feu') || mn.includes('light')) {
                     o.material = lightMaterial;
+                    assigned = true;
                 }
-                // --- CORRECTION CLS : ANTI-BLANC ---
-                else if(modelKey === 'cls') {
-                    // Si l'objet n'a pas été reconnu par les filtres ci-dessus, on lui met le plastique noir par défaut
-                    // ça évite les triangles blancs moches.
-                    o.material = plasticMaterial;
+
+                if(!assigned) {
+                    o.material = defaultMaterial;
                 }
             }
         });
 
         scene.add(carGroup);
         
-        document.getElementById('loader').style.display = 'none';
+        setTimeout(() => {
+            loaderElement.style.opacity = '0';
+            setTimeout(() => { loaderElement.style.display = 'none'; }, 800);
+        }, 500);
+        
         document.getElementById('ui-container').classList.remove('hidden');
     });
 }
@@ -252,9 +292,9 @@ const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
 
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-bloomPass.threshold = 0.98;
-bloomPass.strength = 0.12;
-bloomPass.radius = 0.1;
+bloomPass.threshold = 0.95;
+bloomPass.strength = 0.15;
+bloomPass.radius = 0.15;
 composer.addPass(bloomPass);
 
 function animate() {
@@ -271,58 +311,51 @@ window.addEventListener('resize', () => {
     composer.setSize(window.innerWidth, window.innerHeight);
 });
 
-window.addEventListener('keydown', (e) => {
-    if(!carGroup) return;
-    const moveStep = 0.2;
-    const rotStep = 0.02;
-
-    let changed = false;
-    switch(e.key.toLowerCase()) {
-        case 'arrowup': CONFIG.z -= moveStep; changed = true; break;
-        case 'arrowdown': CONFIG.z += moveStep; changed = true; break;
-        case 'arrowleft': CONFIG.x -= moveStep; changed = true; break;
-        case 'arrowright': CONFIG.x += moveStep; changed = true; break;
-        case 'pageup': CONFIG.y += moveStep; changed = true; break;
-        case 'pagedown': CONFIG.y -= moveStep; changed = true; break;
-        
-        case 'q': CONFIG.rotY += rotStep; changed = true; break;
-        case 'd': CONFIG.rotY -= rotStep; changed = true; break;
-        case 'z': CONFIG.rotX += rotStep; changed = true; break;
-        case 's': CONFIG.rotX -= rotStep; changed = true; break;
-        case 'a': CONFIG.rotZ += rotStep; changed = true; break;
-        case 'e': CONFIG.rotZ -= rotStep; changed = true; break;
-    }
-    
-    if(changed) {
-        updateCarTransform();
-        gui.controllersRecursive().forEach(c => c.updateDisplay());
-    }
-});
-
-document.querySelectorAll('.color-btn').forEach(btn => {
+document.querySelectorAll('.swatch').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        const type = btn.dataset.type;
+        const parent = btn.closest('.swatch-grid');
+        parent.querySelectorAll('.swatch').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        const nameDisplay = document.querySelector('.current-paint');
-        if(nameDisplay) nameDisplay.innerText = btn.dataset.name;
         
-        bodyMaterial.color.setHex(parseInt(btn.dataset.color));
-        if(btn.dataset.name.includes("MAT")) {
-            bodyMaterial.roughness = 0.5; 
-            bodyMaterial.clearcoat = 0.0;
-            bodyMaterial.metalness = 0.3;
-        } else {
-            bodyMaterial.roughness = 0.25; 
-            bodyMaterial.clearcoat = 1.0;
-            bodyMaterial.metalness = 0.6;
+        if (type === 'paint') {
+            document.getElementById('val-paint').innerText = btn.dataset.name;
+            bodyMaterial.color.setHex(parseInt(btn.dataset.color));
+            if(btn.dataset.mat === "true") {
+                bodyMaterial.roughness = 0.6; 
+                bodyMaterial.clearcoat = 0.0;
+                bodyMaterial.metalness = 0.3;
+            } else {
+                bodyMaterial.roughness = 0.15; 
+                bodyMaterial.clearcoat = 1.0;
+                bodyMaterial.metalness = 0.7;
+            }
+        } 
+        else if (type === 'rim') {
+            document.getElementById('val-rim').innerText = btn.dataset.name;
+            rimMaterial.color.setHex(parseInt(btn.dataset.color));
+            if(btn.dataset.name.includes("MATTE")) {
+                rimMaterial.roughness = 0.7;
+                rimMaterial.clearcoat = 0.0;
+            } else {
+                rimMaterial.roughness = 0.2;
+                rimMaterial.clearcoat = 1.0;
+            }
+        }
+        else if (type === 'glass') {
+            document.getElementById('val-glass').innerText = btn.dataset.name;
+            glassMaterial.opacity = parseFloat(btn.dataset.op);
         }
     });
 });
 
 document.querySelectorAll('.cam-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+        document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
         const view = btn.dataset.view;
         controls.autoRotate = false;
+        
         if(view === 'front') camera.position.set(CONFIG.x - 5, CONFIG.y + 1.5, CONFIG.z + 5);
         if(view === 'side') camera.position.set(CONFIG.x + 6, CONFIG.y + 1.5, CONFIG.z);
         if(view === 'back') camera.position.set(CONFIG.x - 5, CONFIG.y + 2, CONFIG.z - 5);
@@ -338,9 +371,27 @@ document.querySelectorAll('.model-btn').forEach(btn => {
     });
 });
 
+const timeSlider = document.getElementById('time-slider');
+if(timeSlider) {
+    timeSlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        const rad = (value / 100) * Math.PI;
+        sunLight.position.x = 150 * Math.cos(rad);
+        sunLight.position.y = 100 * Math.sin(rad);
+        sunLight.intensity = Math.max(0.1, Math.sin(rad) * 1.8);
+        scene.environmentIntensity = Math.max(0.2, Math.sin(rad) * 1.2);
+    });
+}
+
 const startBtn = document.getElementById('start-engine');
 if(startBtn) {
     startBtn.addEventListener('click', () => {
         new Audio('startup.mp3').play().catch(e => console.log(e));
+        
+        const initialInt = lightMaterial.emissiveIntensity;
+        lightMaterial.emissiveIntensity = 10;
+        setTimeout(() => { lightMaterial.emissiveIntensity = initialInt; }, 100);
+        setTimeout(() => { lightMaterial.emissiveIntensity = 10; }, 200);
+        setTimeout(() => { lightMaterial.emissiveIntensity = 2; }, 300);
     });
 }
